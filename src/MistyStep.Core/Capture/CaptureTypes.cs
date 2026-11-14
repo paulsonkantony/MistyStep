@@ -10,6 +10,7 @@ public sealed record CaptureLimits
 {
     public int MaxTextBytes { get; init; } = 1_048_576;
     public long MaxImageBytes { get; init; } = 26_214_400;
+    public int MaxImageEdge { get; init; } = 4096;
     public bool HonorSecrecyMarkers { get; init; } = true;
     public IReadOnlyCollection<string> ExcludedApps { get; init; } = [];
 }

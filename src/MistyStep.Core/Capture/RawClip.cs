@@ -45,8 +45,24 @@ public abstract class RawClip
     public abstract long? GetFileLength(string path);
 }
 
-/// <summary>Raises <see cref="Captured"/> once per debounced clipboard change, with the clipboard open.</summary>
+/// <summary>Why a clipboard read happened.</summary>
+public enum ReadTrigger
+{
+    /// <summary>A debounced clipboard-change notification.</summary>
+    ClipboardChange,
+
+    /// <summary>The 30-second watchdog saw the sequence number move without a notification.</summary>
+    Watchdog,
+
+    /// <summary>The user asked for it: the global hotkey or "Share current clipboard now".</summary>
+    Hotkey,
+}
+
+/// <summary>
+/// Raises <see cref="Captured"/> once per read, with the clipboard open. The <see cref="RawClip"/> is
+/// only valid during the callback.
+/// </summary>
 public interface IClipboardSource
 {
-    event Action<RawClip> Captured;
+    event Action<RawClip, ReadTrigger> Captured;
 }
