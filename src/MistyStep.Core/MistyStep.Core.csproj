@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Core must stay platform-neutral: plain net10.0, no Windows references, no packages. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>MistyStep.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MistyStep.Core.Tests" />
+  </ItemGroup>
+
+</Project>
