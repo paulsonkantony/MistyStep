@@ -157,13 +157,13 @@ public sealed class PipelineTests : IAsyncLifetime
         for (var i = 0; i < 5; i++)
         {
             using var response = await bad.GetAsync("/v1/meta", Ct);
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            await RouteTests.AssertUnauthorized(response);
         }
 
         // Even the right token is refused from that address now.
         using (var locked = await _app.CreateClient(token).GetAsync("/v1/meta", Ct))
         {
-            Assert.Equal(HttpStatusCode.TooManyRequests, locked.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, locked.StatusCode);
             var json = await ReadJsonAsync(locked);
             Assert.Equal("rate_limited", json.GetProperty("error").GetString());
             Assert.Equal(1, json.GetProperty("v").GetInt32());
@@ -172,12 +172,12 @@ public sealed class PipelineTests : IAsyncLifetime
         // Another address is unaffected.
         var (_, otherToken) = _app.Pair(OtherTailnetAddress);
         using (var other = await _app.CreateClient(otherToken, OtherTailnetAddress).GetAsync("/v1/meta", Ct))
-            Assert.Equal(HttpStatusCode.OK, other.StatusCode);
+            await AssertNoErrorAsync(other);
 
         // The lockout ends after five minutes.
         _app.Clock.Advance(5 * 60_000);
         using (var released = await _app.CreateClient(token).GetAsync("/v1/meta", Ct))
-            Assert.Equal(HttpStatusCode.OK, released.StatusCode);
+            await AssertNoErrorAsync(released);
     }
 
     [Fact]
@@ -201,17 +201,24 @@ public sealed class PipelineTests : IAsyncLifetime
         for (var i = 0; i < 20; i++)
         {
             using var ok = await client.GetAsync("/v1/ping", Ct);
-            Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+            await AssertNoErrorAsync(ok);
         }
 
         using (var limited = await client.GetAsync("/v1/ping", Ct))
         {
-            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, limited.StatusCode);
             Assert.Equal("rate_limited", (await ReadJsonAsync(limited)).GetProperty("error").GetString());
         }
 
         _app.Clock.Advance(1000);
         using var later = await client.GetAsync("/v1/ping", Ct);
-        Assert.Equal(HttpStatusCode.OK, later.StatusCode);
+        await AssertNoErrorAsync(later);
+    }
+
+    /// <summary>Errors also use status 200, so success means a body without an "error" key.</summary>
+    private static async Task AssertNoErrorAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.False((await ReadJsonAsync(response)).TryGetProperty("error", out _), "unexpected error body");
     }
 }

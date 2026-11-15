@@ -72,7 +72,7 @@ internal sealed class RequestPipeline(ServerDependencies deps, ILogger<RequestPi
         if (deps.Lockout.IsLockedOut(remote!))
         {
             logger.LogInformation("Refused request from {Remote}: locked out", remote);
-            if (isApi) await Responses.WriteErrorAsync(context, StatusCodes.Status429TooManyRequests, Responses.RateLimited);
+            if (isApi) await Responses.WriteErrorAsync(context, Responses.RateLimited);
             else await PairingPage.WriteLockedOutAsync(context);
             return;
         }
@@ -85,14 +85,14 @@ internal sealed class RequestPipeline(ServerDependencies deps, ILogger<RequestPi
             {
                 deps.Lockout.RecordFailure(remote!);
                 logger.LogInformation("Refused {Path} from {Remote}: unauthorized", request.Path.Value, remote);
-                await Responses.WriteErrorAsync(context, StatusCodes.Status401Unauthorized, Responses.Unauthorized);
+                await Responses.WriteErrorAsync(context, Responses.Unauthorized);
                 return;
             }
 
             if (!deps.RateLimiter.TryAcquire(device.Id))
             {
                 logger.LogInformation("Refused {Path} for {Device}: rate limited", request.Path.Value, device.Name);
-                await Responses.WriteErrorAsync(context, StatusCodes.Status429TooManyRequests, Responses.RateLimited);
+                await Responses.WriteErrorAsync(context, Responses.RateLimited);
                 return;
             }
 

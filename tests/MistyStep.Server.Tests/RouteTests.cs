@@ -149,7 +149,8 @@ public sealed class RouteTests : IAsyncLifetime
 
     internal static async Task AssertUnauthorized(HttpResponseMessage response)
     {
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        // Errors are sent with 200 because the Shortcut does not receive the body of a 401.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await ReadJsonAsync(response);
         Assert.Equal(1, json.GetProperty("v").GetInt32());
         Assert.Equal("unauthorized", json.GetProperty("error").GetString());

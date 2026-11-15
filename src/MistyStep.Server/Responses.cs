@@ -45,6 +45,11 @@ internal static class Responses
         await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
     }
 
-    public static Task WriteErrorAsync(HttpContext context, int status, ErrorResponse error) =>
-        WriteJsonAsync(context, status, error, ServerJsonContext.Default.ErrorResponse);
+    /// <summary>
+    /// Writes an error body with status 200. On a 401 the Shortcut's "Get Contents of URL" did not hand the
+    /// JSON body on (tested on iPadOS 18: "could not convert from Text to Dictionary"), so the alert never
+    /// showed. Per the plan's fallback, /v1 errors return 200 and the Shortcut branches on the "error" key.
+    /// </summary>
+    public static Task WriteErrorAsync(HttpContext context, ErrorResponse error) =>
+        WriteJsonAsync(context, StatusCodes.Status200OK, error, ServerJsonContext.Default.ErrorResponse);
 }

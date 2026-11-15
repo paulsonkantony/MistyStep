@@ -241,7 +241,7 @@ The server exposes four GET routes on one port (default 45654) and accepts no re
 - `?new=1` makes the server answer `unchanged` when this device already received the current item. The server tracks this per device, so the Shortcut stores no state.
 - An item counts as delivered when `/v1/meta` returns it as text, or when `/v1/data` finishes writing the body.
 - `/v1/data` always serves the current image. An optional `?id=` is logged for diagnostics only.
-- Errors use the matching HTTP status (401, 429) and the JSON shape above. Error codes: `unauthorized`, `rate_limited`.
+- Errors on `/v1` use the JSON shape above with HTTP status 200, because the Shortcut does not receive the body of a 401 (M4 finding). Error codes: `unauthorized`, `rate_limited`. Where this plan says "answer 429" or "401", read it as that error body. The HTML pairing page keeps its 410 and 429 statuses.
 
 **Request pipeline, in order**
 
@@ -668,14 +668,14 @@ These could not be confirmed from documentation and must be checked on real devi
 
 **Shortcut behaviour (M4)**
 
-- [ ] Does "Get Contents of URL" accept plain `http://` to a 100.x address, a MagicDNS name and a `.local` name on current iPadOS? If not, serve HTTPS through Tailscale certificates and drop Home Wi-Fi mode.
-- [ ] On a 401 or 429 response, does the Shortcut still receive the JSON body? If not, return 200 with the error JSON.
-- [ ] Does the Base64 decode action accept the setup code exactly as specified?
-- [ ] Does "Copy to Clipboard" on a fetched PNG paste as an image in Notes, Mail and Messages? Repeat for JPEG, GIF and WebP.
-- [ ] Which permission prompts appear on first run, and does "Always Allow" make later runs silent?
-- [ ] What does the user see when the PC is unreachable, in a manual run and in an `auto` automation? How long is the timeout?
-- [ ] Is the App Opened trigger with Run Immediately reliable on iPadOS, and is its notification banner tolerable in daily use?
-- [ ] Does the pasted setup code sync to the user's iPhone through iCloud? If so, one token serves two devices; decide whether to document or discourage that.
+- [x] Does "Get Contents of URL" accept plain `http://` to a 100.x address, a MagicDNS name and a `.local` name on current iPadOS? If not, serve HTTPS through Tailscale certificates and drop Home Wi-Fi mode. **Answer (2026-11-14, iPadOS 18):** yes for the 100.x address. MagicDNS and `.local` are checked in M5.
+- [x] On a 401 or 429 response, does the Shortcut still receive the JSON body? If not, return 200 with the error JSON. **Answer:** no. A revoked device got "Conversion Error: Get Dictionary Value failed because Shortcuts could not convert from Text to Dictionary". `/v1` errors now return 200 with the error JSON.
+- [x] Does the Base64 decode action accept the setup code exactly as specified? **Answer:** yes.
+- [ ] Does "Copy to Clipboard" on a fetched PNG paste as an image in Notes, Mail and Messages? Repeat for JPEG, GIF and WebP. **Partial:** a copied image pastes on the iPad. JPEG, GIF and WebP files are not yet tested.
+- [x] Which permission prompts appear on first run, and does "Always Allow" make later runs silent? **Answer:** a single Allow prompt to connect; later runs are silent.
+- [x] What does the user see when the PC is unreachable, in a manual run and in an `auto` automation? How long is the timeout? **Answer:** a manual run shows "Request timed out" after 1 minute (the Shortcuts default; "Get Contents of URL" has no timeout setting). The automation was dropped, see below.
+- [x] Is the App Opened trigger with Run Immediately reliable on iPadOS, and is its notification banner tolerable in daily use? **Answer:** it runs, but only when an app opens, so it cannot keep the clipboard current while working. Dropped from the docs. The pairing page and BUILD.md recommend an AssistiveTouch button or a Control Center control instead.
+- [ ] Does the pasted setup code sync to the user's iPhone through iCloud? If so, one token serves two devices; decide whether to document or discourage that. **Answer:** not tested; the user has no iPhone. Still open for other users.
 
 **Networking (M5)**
 

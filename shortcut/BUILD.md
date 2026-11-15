@@ -90,6 +90,8 @@ The blocks below are flat, with no If inside another If. Each one sets a `Note`,
 
 Run the Shortcut once from the editor (the ▶ button). iPadOS asks for permission to connect to the PC's address: choose **Always Allow**. The pairing window on the PC then shows **Paired**.
 
+If the PC is off, asleep, or Tailscale is off on either device, the Shortcut waits about a minute and then shows **Request timed out**. Shortcuts has no setting to shorten that wait.
+
 ## Ways to run it
 
 The Shortcut only puts the PC's item on the iPad clipboard. Then long-press where you want it and tap **Paste**. iPadOS cannot run it continuously in the background, so you run it each time you want the latest item. The first two ways below work without leaving the app you're in.
