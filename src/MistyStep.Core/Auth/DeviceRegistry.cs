@@ -17,6 +17,23 @@ public sealed record PairingCode(string Code, string BaseUrl, long ExpiresAtMs)
     public override string ToString() => $"PairingCode {{ BaseUrl = {BaseUrl}, ExpiresAtMs = {ExpiresAtMs} }}";
 }
 
+public abstract record PairingStatus
+{
+    private PairingStatus() { }
+
+    /// <summary>Not scanned yet.</summary>
+    public sealed record Waiting(long ExpiresAtMs) : PairingStatus;
+
+    /// <summary>A device opened the pairing page. <see cref="Device.LastSeenUtc"/> is set once it calls the API.</summary>
+    public sealed record Redeemed(Device Device, long ExpiresAtMs) : PairingStatus;
+
+    /// <summary>Expired, cancelled, or never existed.</summary>
+    public sealed record Gone : PairingStatus
+    {
+        public static readonly Gone Instance = new();
+    }
+}
+
 public enum RedeemFailure
 {
     /// <summary>Unknown, expired or cancelled code.</summary>
@@ -58,6 +75,9 @@ public interface IDeviceRegistry
     PairingCode CreatePairingCode(string baseUrl, string pcName);
     RedeemResult Redeem(string? code, IPAddress remote, string? userAgent);
     void CancelPairing(string code);
+
+    /// <summary>For the pairing wizard: whether a code is still waiting, redeemed (and by which device), or gone.</summary>
+    PairingStatus GetPairingStatus(string code);
 
     Device? Authenticate(string? token);
     void RecordSeen(string deviceId);
@@ -207,6 +227,18 @@ public sealed class DeviceRegistry(IClock clock) : IDeviceRegistry
 
         if (structural) Changed?.Invoke(RegistryChange.Structural);
         return result;
+    }
+
+    public PairingStatus GetPairingStatus(string code)
+    {
+        lock (_gate)
+        {
+            PruneExpired();
+            if (!_pending.TryGetValue(code, out var pending)) return PairingStatus.Gone.Instance;
+            if (pending.DeviceId is not null && _byId.TryGetValue(pending.DeviceId, out var entry))
+                return new PairingStatus.Redeemed(entry.ToDevice(), pending.ExpiresAtMs);
+            return pending.DeviceId is null ? new PairingStatus.Waiting(pending.ExpiresAtMs) : PairingStatus.Gone.Instance;
+        }
     }
 
     /// <summary>Cancels a pairing code. If a device already redeemed it, that device is revoked.</summary>
