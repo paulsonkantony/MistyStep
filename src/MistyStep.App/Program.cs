@@ -1,6 +1,7 @@
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
 using MistyStep.Windows.Network;
+using MistyStep.Windows.Shell;
 
 namespace MistyStep.App;
 
@@ -8,6 +9,21 @@ internal static class Program
 {
     private const string MutexName = @"Local\MistyStep.SingleInstance";
     private const string ActivateEventName = @"Local\MistyStep.Activate";
+
+    /// <summary>The other Misty Step process in this Windows session, or null to allow any process.</summary>
+    private static int? RunningCopyId()
+    {
+        using var self = System.Diagnostics.Process.GetCurrentProcess();
+        var others = System.Diagnostics.Process.GetProcessesByName(self.ProcessName);
+        try
+        {
+            return others.FirstOrDefault(p => p.Id != self.Id && p.SessionId == self.SessionId)?.Id;
+        }
+        finally
+        {
+            foreach (var p in others) p.Dispose();
+        }
+    }
 
     [STAThread]
     private static int Main(string[] args)
@@ -31,6 +47,9 @@ internal static class Program
         using var activate = new EventWaitHandle(false, EventResetMode.AutoReset, ActivateEventName);
         if (!createdNew)
         {
+            // This process owns the foreground (the user just started it). Hand that right to the running copy,
+            // so its tray menu takes focus and closes normally when the user clicks elsewhere.
+            ForegroundPermission.Allow(RunningCopyId());
             activate.Set();
             return 0;
         }
