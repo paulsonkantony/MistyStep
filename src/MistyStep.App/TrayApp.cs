@@ -27,8 +27,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly CaptureCoordinator _coordinator;
     private readonly System.Windows.Forms.Timer _timer;
     private readonly SynchronizationContext _ui;
-    private readonly Icon _normalIcon = AppIcon.Create();
-    private readonly Icon _attentionIcon = AppIcon.Create(attention: true);
+    private readonly Icon _normalIcon = AppIcon.ForTray();
+    private readonly Icon _attentionIcon = AppIcon.ForTray(attention: true);
     private readonly HashSet<string> _warnedStale = new(StringComparer.Ordinal);
     private PairingForm? _pairing;
     private DevicesForm? _devices;

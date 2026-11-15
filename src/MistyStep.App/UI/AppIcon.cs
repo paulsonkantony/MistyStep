@@ -2,54 +2,58 @@ using System.Buffers.Binary;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Drawing.Text;
+using System.Windows.Forms;
 
 namespace MistyStep.App.UI;
 
 /// <summary>
-/// Draws the tray icon at runtime: a rounded blue square with a white "M". Packed as an in-memory
-/// .ico (PNG payload) so the Icon owns its handle and no P/Invoke is needed here.
-/// <paramref name="attention"/> adds an orange dot for the "needs attention" state.
-/// (M6 adds light/dark and the paused variant.)
+/// The app icon: "Wingfoot" by Lorc (game-icons.net, CC BY 3.0), white on the app's blue rounded square.
+/// Embedded as Assets/MistyStep.ico (built by tools/make-icon.ps1). The tray's "needs attention" variant
+/// adds an orange dot, packed as an in-memory .ico (PNG payload) so the Icon owns its handle and no
+/// P/Invoke is needed here. (M6 adds light/dark and the paused variant.)
 /// </summary>
 internal static class AppIcon
 {
-    public static Icon Create(int size = 32, bool attention = false)
+    private const string ResourceName = "MistyStep.ico";
+
+    /// <summary>The full multi-size icon, for window title bars and Alt+Tab.</summary>
+    public static Icon ForWindow() => Load(null);
+
+    /// <summary>A tray-sized icon (the system small-icon size for the current DPI), optionally with the attention dot.</summary>
+    public static Icon ForTray(bool attention = false)
     {
+        var size = SystemInformation.SmallIconSize.Width;
+        using var source = Load(new Size(size, size));
+        if (!attention) return (Icon)source.Clone();
+
         using var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);
         using (var g = Graphics.FromImage(bitmap))
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.Clear(Color.Transparent);
+            g.DrawIcon(source, new Rectangle(0, 0, size, size));
 
-            var radius = size / 4f;
-            using var path = new GraphicsPath();
-            var r = new RectangleF(0.5f, 0.5f, size - 1f, size - 1f);
-            path.AddArc(r.X, r.Y, radius * 2, radius * 2, 180, 90);
-            path.AddArc(r.Right - radius * 2, r.Y, radius * 2, radius * 2, 270, 90);
-            path.AddArc(r.Right - radius * 2, r.Bottom - radius * 2, radius * 2, radius * 2, 0, 90);
-            path.AddArc(r.X, r.Bottom - radius * 2, radius * 2, radius * 2, 90, 90);
-            path.CloseFigure();
-            using var fill = new SolidBrush(Color.FromArgb(0x24, 0x57, 0xD6));
-            g.FillPath(fill, path);
-
-            using var font = new Font("Segoe UI", size * 0.5f, FontStyle.Bold, GraphicsUnit.Pixel);
-            using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-            g.DrawString("M", font, Brushes.White, new RectangleF(0, 0, size, size + 1), format);
-
-            if (attention)
-            {
-                var dot = size * 0.5f;
-                var dotRect = new RectangleF(size - dot - 0.5f, size - dot - 0.5f, dot, dot);
-                using var ring = new SolidBrush(Color.White);
-                g.FillEllipse(ring, dotRect);
-                dotRect.Inflate(-size * 0.07f, -size * 0.07f);
-                using var orange = new SolidBrush(Color.FromArgb(0xF5, 0x8A, 0x07));
-                g.FillEllipse(orange, dotRect);
-            }
+            var dot = size * 0.5f;
+            var dotRect = new RectangleF(size - dot - 0.5f, size - dot - 0.5f, dot, dot);
+            using var ring = new SolidBrush(Color.White);
+            g.FillEllipse(ring, dotRect);
+            dotRect.Inflate(-size * 0.07f, -size * 0.07f);
+            using var orange = new SolidBrush(Color.FromArgb(0xF5, 0x8A, 0x07));
+            g.FillEllipse(orange, dotRect);
         }
 
+        return Pack(bitmap);
+    }
+
+    private static Icon Load(Size? size)
+    {
+        using var stream = typeof(AppIcon).Assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException("The app icon resource is missing.");
+        return size is { } s ? new Icon(stream, s) : new Icon(stream);
+    }
+
+    private static Icon Pack(Bitmap bitmap)
+    {
         byte[] png;
         using (var pngStream = new MemoryStream())
         {
@@ -58,6 +62,7 @@ internal static class AppIcon
         }
 
         // ICONDIR (6 bytes) + one ICONDIRENTRY (16 bytes) + PNG data.
+        var size = bitmap.Width;
         var ico = new byte[22 + png.Length];
         BinaryPrimitives.WriteUInt16LittleEndian(ico.AsSpan(2), 1); // type: icon
         BinaryPrimitives.WriteUInt16LittleEndian(ico.AsSpan(4), 1); // one image

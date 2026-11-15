@@ -9,7 +9,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <IsPackable>false</IsPackable>
+    <!-- "Wingfoot" by Lorc, game-icons.net, CC BY 3.0 (see README.md, Credits). Rebuild with tools/make-icon.ps1. -->
+    <ApplicationIcon>Assets\MistyStep.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\MistyStep.ico" LogicalName="MistyStep.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

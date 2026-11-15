@@ -55,7 +55,7 @@ internal sealed class PairingForm : Form
     {
         _host = host;
         Text = "Pair a device - Misty Step";
-        Icon = AppIcon.Create();
+        Icon = AppIcon.ForWindow();
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;

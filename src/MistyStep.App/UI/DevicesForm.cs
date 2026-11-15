@@ -32,7 +32,7 @@ internal sealed class DevicesForm : Form
     {
         _host = host;
         Text = "Devices - Misty Step";
-        Icon = AppIcon.Create();
+        Icon = AppIcon.ForWindow();
         StartPosition = FormStartPosition.CenterScreen;
         Font = SystemFonts.MessageBoxFont!;
         Size = new Size(720, 360);
