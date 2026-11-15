@@ -98,13 +98,27 @@ Run the Shortcut once from the editor (the ▶ button). iPadOS asks for permissi
 
 ## Optional: near-automatic mode
 
-In Shortcuts: **Automation**, then **+**, then **App**. Choose the apps you paste into, tick **Is Opened**, and choose **Run Immediately**. Add one action, **Run Shortcut** *Paste from PC*, and set its input to the text `auto`. The iPad clipboard then changes only when the PC holds an item this iPad has not fetched.
+The automation runs the Shortcut quietly whenever you open one of the apps you choose. It only puts the PC's item on the iPad clipboard; it never pastes for you, and nothing appears inside the app. You still long-press and tap **Paste**.
+
+1. In the Shortcuts app, tap **Automation** (bottom bar or sidebar), then **+** (or **New Automation**).
+2. Scroll down and tap **App**.
+3. Tap **Choose** and tick the apps you paste into (for example Notes, Mail, Messages). Tap **Done**.
+4. Make sure **Is Opened** is ticked, and choose **Run Immediately**. Turn **Notify When Run** off if you don't want a banner. Tap **Next**.
+5. Tap **New Blank Automation**. Do not pick **Paste from PC** from the list shown here, because then it cannot be given the `auto` input.
+6. Tap **Add Action**, search **Text**, and add it. Type `auto` in it.
+7. Search **Run Shortcut** and add it. Tap the blue **Shortcut** placeholder and choose **Paste from PC**.
+8. Tap the arrow (**›**) on the Run Shortcut action to show its options. Tap **Input** and choose the *Text* variable.
+9. Tap **Done**.
+
+To test it: copy something new on the PC, then open one of the chosen apps, wait a second, long-press and tap **Paste**. In `auto` mode the Shortcut skips an item this iPad has already fetched, so an item you already pasted with the manual Shortcut is not fetched again. It shows no notification either way.
 
 ## Re-pairing (new PC name, port or address)
 
 Pair again from the tray menu, then open the Shortcut and replace the setup code in the first **Text** action (step 1) with the new one.
 
-## Sharing the Shortcut (maintainers)
+## Sharing the Shortcut (maintainers, optional)
+
+This is optional. Without a link, the pairing page shows these build steps instead. An iCloud link is created and stored under the sharer's Apple Account, and it may show the account's name to people who open it. Apple only installs ready-made Shortcuts that were signed through some Apple Account, so there is no anonymous way to share one. To keep a personal account out of it, share from a separate Apple Account, or don't share at all.
 
 1. Add an import question so people paste their own code when they install it: in the editor, open the shortcut's **Details** (ⓘ), then **Setup**, then **Import Questions**, then **Add Question**. Pick the Text field from step 1, with the question "Paste the setup code from the Misty Step pairing page".
 2. **Clear the Text action in step 1** so no real setup code is shared. Anyone with the link can read the Shortcut's contents.

@@ -104,7 +104,7 @@ internal static class PairingPage
             <li><b>If</b> <i>Type</i> <b>is</b> <code>image</code>. Inside: <b>Get Dictionary Value</b> key <code>id</code> in <i>Meta</i>; <b>Text</b> <i>BaseUrl</i><code>/v1/data?id=</code><i>Dictionary Value</i>; <b>Get Contents of URL</b> with the same two headers; <b>Copy to Clipboard</b>; <b>Text</b> <code>Image copied from </code><i>PC</i>; <b>Set Variable</b> <code>Note</code>.</li>
             <li><b>If</b> <i>Quiet</i> <b>is not</b> <code>1</code>. Inside: <b>Show Notification</b> with <i>Note</i>.</li>
           </ol>
-          <p class="note">Optional near-automatic mode: in Shortcuts, Automation → + → App → pick the apps you paste into → Is Opened → Run Immediately, with one action: Run Shortcut "Paste from PC" with input <code>auto</code>.</p>
+          <p class="note">Optional near-automatic mode: in Shortcuts, Automation → + → App → pick the apps you paste into → Is Opened → Run Immediately → Next → New Blank Automation. Add two actions: <b>Text</b> <code>auto</code>, then <b>Run Shortcut</b> "Paste from PC" with its Input set to <i>Text</i>. It only copies items this device has not fetched yet, silently; then paste as usual.</p>
         </details>
         """;
 
