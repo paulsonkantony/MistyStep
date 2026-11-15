@@ -692,6 +692,17 @@ These could not be confirmed from documentation and must be checked on real devi
 - [ ] Tailscale with the iPad on cellular, or on another network such as a phone hotspot.
 - [ ] Port scan from another LAN device in Tailscale-only mode. The owner's Wi-Fi is Public, and the Home Wi-Fi rule is off, so connections are expected to fail. From the PC itself, a request to its own Wi-Fi address was dropped.
 
+**M6 results (2026-11-14)**
+
+Demonstrated on the owner's PC and iPad: tray menu, pause with auto-resume and the grey icon, the blink on fetch, Manual mode with the hotkey, hotkey change in Settings, Help and troubleshooting with diagnostic details, and a second launch opening the running copy's menu.
+
+**Pending M6 lifecycle checks** (run during normal use; M6 was merged with these open)
+
+- [ ] First-run welcome on a clean profile (no config.json), including Start with Windows.
+- [ ] Cold boot with Start with Windows on, before Tailscale connects: the tray recovers within about 15 s.
+- [ ] Sleep and resume, a Wi-Fi switch, a Remote Desktop session, and a locked screen with "Keep sharing while the screen is locked" off.
+- [ ] Port taken: start something else on 45654 first; the tray shows the error and names the port.
+
 **Release (M7)**
 
 - [ ] Is the name "Misty Step" free as a trademark, GitHub repository and winget package id?
