@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
+using MistyStep.Windows.Network;
 
 namespace MistyStep.App;
 
@@ -11,6 +12,14 @@ internal static class Program
     private static int Main(string[] args)
     {
         var options = AppOptions.Parse(args);
+
+        // Elevated firewall helper: rewrite the two rules and exit. No mutex, no UI, no settings.
+        if (options.UpdateFirewallPort is { } firewallPort)
+        {
+            return firewallPort == 0 || Environment.ProcessPath is not { } exePath
+                ? FirewallConfigurator.Failed
+                : FirewallConfigurator.Apply(exePath, firewallPort);
+        }
 
         // One instance per Windows session. (M6 makes the second instance open the first one's menu.)
         using var mutex = new Mutex(initiallyOwned: true, MutexName, out var createdNew);

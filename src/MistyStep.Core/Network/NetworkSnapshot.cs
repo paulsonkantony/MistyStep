@@ -19,8 +19,3 @@ public sealed record NetworkSnapshot(
 {
     public static NetworkSnapshot Empty(string hostname) => new(null, null, hostname, []);
 }
-
-public interface INetworkProbe
-{
-    Task<NetworkSnapshot> ProbeAsync(CancellationToken cancellationToken);
-}

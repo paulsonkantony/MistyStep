@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
@@ -26,8 +27,13 @@ internal sealed class TrayApp : ApplicationContext
     private readonly CaptureCoordinator _coordinator;
     private readonly System.Windows.Forms.Timer _timer;
     private readonly SynchronizationContext _ui;
+    private readonly Icon _normalIcon = AppIcon.Create();
+    private readonly Icon _attentionIcon = AppIcon.Create(attention: true);
+    private readonly HashSet<string> _warnedStale = new(StringComparer.Ordinal);
     private PairingForm? _pairing;
     private DevicesForm? _devices;
+    private Action? _balloonClick;
+    private int _ticks;
 
     public TrayApp(AppHost host, AppOptions options)
     {
@@ -49,8 +55,10 @@ internal sealed class TrayApp : ApplicationContext
         _menu.Items.Add("Quit", null, (_, _) => ExitThread());
         _menu.Opening += (_, _) => RefreshStatus();
 
-        _icon = new NotifyIcon { Icon = AppIcon.Create(), ContextMenuStrip = _menu, Visible = true };
+        _icon = new NotifyIcon { Icon = _normalIcon, ContextMenuStrip = _menu, Visible = true };
         _icon.DoubleClick += (_, _) => { if (_host.Registry.Devices.Count == 0) ShowPairing(); else ShowDevices(); };
+        _icon.BalloonTipClicked += (_, _) => { var click = _balloonClick; _balloonClick = null; click?.Invoke(); };
+        _icon.BalloonTipClosed += (_, _) => _balloonClick = null;
 
         _watcher = new ClipboardWatcher(host.LoggerFactory.CreateLogger<ClipboardWatcher>());
         _coordinator = new CaptureCoordinator(_watcher, host.Store, new GdiImageEncoder(),
@@ -64,9 +72,12 @@ internal sealed class TrayApp : ApplicationContext
         _timer.Tick += (_, _) =>
         {
             _host.Persistence.Tick();
+            // Windows does not signal a Private/Public switch, so re-probe every tick; the firewall once a minute.
+            _host.RefreshInBackground(firewall: ++_ticks % 4 == 0);
             RefreshStatus();
         };
         _timer.Start();
+        _host.NetworkChanged += OnHostNetworkChanged;
 
         RefreshStatus();
         ShowStartupNotices(options);
@@ -74,6 +85,7 @@ internal sealed class TrayApp : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        _host.NetworkChanged -= OnHostNetworkChanged;
         _timer.Stop();
         _pairing?.Close();
         _devices?.Close();
@@ -90,6 +102,8 @@ internal sealed class TrayApp : ApplicationContext
             _timer.Dispose();
             _icon.Dispose();
             _menu.Dispose();
+            _normalIcon.Dispose();
+            _attentionIcon.Dispose();
         }
 
         base.Dispose(disposing);
@@ -141,14 +155,37 @@ internal sealed class TrayApp : ApplicationContext
 
     private void RefreshStatus()
     {
-        string line;
-        if (_host.ServerError is { } error) line = $"Needs attention: {error}";
-        else if (!_watcher.IsListening) line = "Needs attention: clipboard listener is not running";
-        else line = ShareStatus.Describe(_host.Store.GetCurrent(), _host.State.Paused, _host.Clock.MonotonicMs);
+        var health = _host.EvaluateHealth(_watcher.IsListening);
+        var line = health.IsHealthy
+            ? ShareStatus.Describe(_host.Store.GetCurrent(), _host.State.Paused, _host.Clock.MonotonicMs)
+            : $"Needs attention: {health.Problem}";
 
         _status.Text = line;
+        var icon = health.IsHealthy ? _normalIcon : _attentionIcon;
+        if (!ReferenceEquals(_icon.Icon, icon)) _icon.Icon = icon;
         var tooltip = "Misty Step\n" + line;
         _icon.Text = tooltip.Length > 127 ? tooltip[..127] : tooltip;
+    }
+
+    private void OnHostNetworkChanged() => _ui.Post(_ =>
+    {
+        RefreshStatus();
+        WarnAboutStaleDevices();
+    }, null);
+
+    /// <summary>One tray warning per device whose stored address stopped matching this PC (renamed, new address).</summary>
+    private void WarnAboutStaleDevices()
+    {
+        var stale = _host.StaleDevices();
+        _warnedStale.IntersectWith(stale.Select(d => d.Id));
+        var fresh = stale.Where(d => !_warnedStale.Contains(d.Id)).ToList();
+        if (fresh.Count == 0) return;
+
+        foreach (var device in fresh) _warnedStale.Add(device.Id);
+        _host.Log.LogInformation("{Count} paired device(s) use an old address for this PC", fresh.Count);
+        var names = string.Join(", ", fresh.Select(d => d.Name));
+        Balloon("Pair again", $"{names} uses an old address for this PC (it was renamed or its address changed). Click to pair again.",
+            ToolTipIcon.Warning, ShowPairing);
     }
 
     private void ClearSharedItem()
@@ -186,5 +223,9 @@ internal sealed class TrayApp : ApplicationContext
         _devices.Activate();
     }
 
-    private void Balloon(string title, string text, ToolTipIcon icon) => _icon.ShowBalloonTip(5000, title, text, icon);
+    private void Balloon(string title, string text, ToolTipIcon icon, Action? onClick = null)
+    {
+        _balloonClick = onClick;
+        _icon.ShowBalloonTip(5000, title, text, icon);
+    }
 }

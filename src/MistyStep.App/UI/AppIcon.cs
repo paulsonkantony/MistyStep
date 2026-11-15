@@ -9,11 +9,12 @@ namespace MistyStep.App.UI;
 /// <summary>
 /// Draws the tray icon at runtime: a rounded blue square with a white "M". Packed as an in-memory
 /// .ico (PNG payload) so the Icon owns its handle and no P/Invoke is needed here.
-/// (M6 adds light/dark and state variants.)
+/// <paramref name="attention"/> adds an orange dot for the "needs attention" state.
+/// (M6 adds light/dark and the paused variant.)
 /// </summary>
 internal static class AppIcon
 {
-    public static Icon Create(int size = 32)
+    public static Icon Create(int size = 32, bool attention = false)
     {
         using var bitmap = new Bitmap(size, size, PixelFormat.Format32bppArgb);
         using (var g = Graphics.FromImage(bitmap))
@@ -36,6 +37,17 @@ internal static class AppIcon
             using var font = new Font("Segoe UI", size * 0.5f, FontStyle.Bold, GraphicsUnit.Pixel);
             using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
             g.DrawString("M", font, Brushes.White, new RectangleF(0, 0, size, size + 1), format);
+
+            if (attention)
+            {
+                var dot = size * 0.5f;
+                var dotRect = new RectangleF(size - dot - 0.5f, size - dot - 0.5f, dot, dot);
+                using var ring = new SolidBrush(Color.White);
+                g.FillEllipse(ring, dotRect);
+                dotRect.Inflate(-size * 0.07f, -size * 0.07f);
+                using var orange = new SolidBrush(Color.FromArgb(0xF5, 0x8A, 0x07));
+                g.FillEllipse(orange, dotRect);
+            }
         }
 
         byte[] png;

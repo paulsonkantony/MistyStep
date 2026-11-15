@@ -321,7 +321,7 @@ Input `open` is a third mode: when `Meta.isUrl` is true, run **Open URLs** on th
 - Spotlight with a hardware keyboard: Cmd+Space, type "Paste", Return.
 - Apple Pencil Pro squeeze, or Siri by name.
 
-**Optional near-automatic mode**
+**Optional near-automatic mode** (dropped from the docs after M4: the App trigger fires only when an app opens, so it cannot keep the clipboard current. The docs recommend an AssistiveTouch button or a Control Center control instead. The `auto` input stays in the Shortcut.)
 
 Create a personal automation: App, choose the apps you paste into, Is Opened, Run Immediately. Its one action is Run Shortcut "Paste from PC" with input `auto`. The iPad clipboard is replaced only when the PC holds an item this iPad has not fetched. In home Wi-Fi mode, start the automation with a network-name check so it does not run elsewhere.
 
@@ -476,6 +476,7 @@ Quit
 - Update notice with a link to release notes. No silent self-update.
 - Strings moved to resource files so the app can be translated.
 - Optional HTTPS in Tailscale mode using Tailscale-issued certificates.
+- Re-pair from the Shortcut (owner request, 2026-11-14): when the PC answers `unauthorized`, or on a "Re-pair" choice, the Shortcut asks for the new setup code (Ask for Input) and carries on, so nobody edits its first Text action. A Shortcut cannot edit itself, so the code would live in a file it reads and rewrites, for example `Shortcuts/MistyStep/setup.txt` in iCloud Drive. Check how file permissions and iCloud sync behave before committing to it.
 
 **Deliberately left out**
 
@@ -680,7 +681,7 @@ These could not be confirmed from documentation and must be checked on real devi
 **Networking (M5)**
 
 - [ ] Does `<hostname>.local` resolve from an iPad on common home routers? If unreliable, default to the IP address.
-- [ ] Which firewall profile does Windows assign to the Tailscale adapter, and does the `profile=any` rule with `remoteip` behave as intended?
+- [ ] Which firewall profile does Windows assign to the Tailscale adapter, and does the `profile=any` rule with `remoteip` behave as intended? **Partial (2026-11-14):** on the owner's PC the Tailscale adapter is Private and the Wi-Fi is Public. Windows had auto-created broad "mistystep.exe" allow rules (Private and Public) from its own prompt; the firewall helper replaces them with the two scoped rules.
 - [ ] Does Tailscale on iPadOS stay connected in the background well enough that the Shortcut works without opening the Tailscale app?
 - [ ] Do Tailscale's current plan terms cover this personal two-device use for free? Check before recommending it in the README.
 

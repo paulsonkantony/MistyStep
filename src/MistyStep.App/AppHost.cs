@@ -1,10 +1,12 @@
 using System.Net.NetworkInformation;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using MistyStep.App.Logging;
 using MistyStep.Core.Auth;
 using MistyStep.Core.Capture;
 using MistyStep.Core.Config;
+using MistyStep.Core.Network;
 using MistyStep.Core.Store;
 using MistyStep.Core.Time;
 using MistyStep.Server;
@@ -70,14 +72,16 @@ internal sealed class AppHost : IAsyncDisposable
         Persistence.SaveFailed += error => Log.LogWarning("Could not save settings: {ErrorType}", error);
         Store = new ClipStore(Clock, config.ExpiryMinutes);
 
-        var network = NetworkProbe.Probe();
+        var network = NetworkProbe.Probe(magicDnsName: null);
         State = new ServerState(config.Port, Environment.MachineName, Version, network)
         {
             TailscaleEnabled = config.TailscaleEnabled ?? network.TailscaleAddress is not null,
             LanEnabled = config.LanEnabled,
             ShortcutUrl = config.ShortcutUrl,
         };
-        Log.LogInformation("Tailscale address {Found}", network.TailscaleAddress is null ? "not found" : "found");
+        Log.LogInformation("Tailscale address {Found}; Home Wi-Fi {Lan}",
+            network.TailscaleAddress is null ? "not found" : "found",
+            PairingAddress.HasAddress(ConnectionMode.HomeWifi, network) ? "available" : "not available (no Private network)");
 
         var deps = new ServerDependencies(Store, Registry, new AuthLockout(Clock), new DeviceRateLimiter(Clock), Clock, State);
         try
@@ -101,7 +105,79 @@ internal sealed class AppHost : IAsyncDisposable
         }
 
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
+
+        // The MagicDNS name and firewall state take a process run and a COM walk: fetch them off the UI thread.
+        RefreshInBackground(firewall: true);
     }
+
+    /// <summary>The running executable; the firewall rules are scoped to it.</summary>
+    public string ExePath { get; } = Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "MistyStep.exe");
+
+    /// <summary>Last firewall check. Unknown until the first check finishes, and never reported as a problem.</summary>
+    public FirewallState Firewall { get; private set; } = FirewallState.Unknown;
+
+    /// <summary>Raised (on a pool thread) after the network snapshot or firewall state changed.</summary>
+    public event Action? NetworkChanged;
+
+    /// <summary>The four health checks. The clipboard listener lives in the tray, so it is passed in.</summary>
+    public HealthReport EvaluateHealth(bool listenerRegistered) =>
+        Health.Evaluate(new HealthInputs(listenerRegistered, ServerError, State.TailscaleEnabled, State.LanEnabled, State.Network, Firewall));
+
+    /// <summary>Paired devices whose stored address no longer reaches this PC.</summary>
+    public IReadOnlyList<Device> StaleDevices() => DeviceAddressCheck.StaleDevices(Registry.Devices, State.Network, State.Port);
+
+    /// <summary>Turns Home Wi-Fi mode on (the user opts in during pairing).</summary>
+    public void EnableLan()
+    {
+        State.LanEnabled = true;
+        if (!Persistence.Settings.LanEnabled) Persistence.Update(c => c with { LanEnabled = true });
+        Log.LogInformation("Home Wi-Fi mode turned on");
+    }
+
+    /// <summary>Turns Tailscale mode on (pairing over Tailscale turns it on for good).</summary>
+    public void EnableTailscale()
+    {
+        State.TailscaleEnabled = true;
+        if (Persistence.Settings.TailscaleEnabled != true) Persistence.Update(c => c with { TailscaleEnabled = true });
+    }
+
+    /// <summary>Re-reads the firewall rules for the enabled modes (plus <paramref name="extraMode"/>, for a wizard preflight).</summary>
+    public FirewallState RefreshFirewall(ConnectionMode? extraMode = null)
+    {
+        var needTailscale = State.TailscaleEnabled || extraMode == ConnectionMode.Tailscale;
+        var needLan = State.LanEnabled || extraMode == ConnectionMode.HomeWifi;
+        FirewallState state;
+        try { state = FirewallReader.Check(ExePath, State.Port, needTailscale, needLan); }
+        catch (Exception ex)
+        {
+            Log.LogWarning("Firewall check failed: {ErrorType}", ex.GetType().Name);
+            state = FirewallState.Unknown;
+        }
+
+        if (extraMode is null || (State.TailscaleEnabled == needTailscale && State.LanEnabled == needLan))
+        {
+            if (state != Firewall) Log.LogInformation("Firewall state {State}", state);
+            Firewall = state;
+        }
+
+        return state;
+    }
+
+    /// <summary>Probes the network (and, when asked, the firewall) on a pool thread, then raises <see cref="NetworkChanged"/>.</summary>
+    public void RefreshInBackground(bool firewall) => Task.Run(async () =>
+    {
+        try
+        {
+            await RefreshNetworkAsync(CancellationToken.None).ConfigureAwait(false);
+            if (firewall) RefreshFirewall();
+            NetworkChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning("Network refresh failed: {ErrorType}", ex.GetType().Name);
+        }
+    });
 
     /// <summary>Settings that shape capture, read fresh for every copy.</summary>
     public CaptureLimits CaptureLimits
@@ -120,26 +196,60 @@ internal sealed class AppHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Re-reads local addresses. Tailscale often comes up after the app at sign-in.</summary>
-    public void RefreshNetwork()
+    private readonly SemaphoreSlim _probeLock = new(1, 1);
+    private string? _magicDnsName;
+    private System.Net.IPAddress? _magicDnsFor;
+
+    /// <summary>
+    /// Re-reads local addresses and categories. Tailscale often comes up after the app at sign-in, and Windows
+    /// does not signal a Private/Public switch, so the tray also calls this every 15 s. The MagicDNS name is
+    /// fetched again only when the Tailscale address changes.
+    /// </summary>
+    public async Task RefreshNetworkAsync(CancellationToken cancellationToken)
     {
-        var snapshot = NetworkProbe.Probe();
-        var hadTailscale = State.Network.TailscaleAddress is not null;
-        State.Network = snapshot;
-        if (Persistence.Settings.TailscaleEnabled is null && snapshot.TailscaleAddress is not null) State.TailscaleEnabled = true;
-        if (hadTailscale != snapshot.TailscaleAddress is not null)
-            Log.LogInformation("Tailscale address {Found}", snapshot.TailscaleAddress is null ? "lost" : "found");
+        await _probeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var before = State.Network;
+            var snapshot = NetworkProbe.Probe(_magicDnsName);
+
+            if (snapshot.TailscaleAddress is not null && !snapshot.TailscaleAddress.Equals(_magicDnsFor))
+            {
+                _magicDnsName = await TailscaleCli.GetMagicDnsNameAsync(cancellationToken).ConfigureAwait(false);
+                _magicDnsFor = snapshot.TailscaleAddress;
+                snapshot = snapshot with { MagicDnsName = _magicDnsName };
+                Log.LogInformation("Tailscale name {Found}", _magicDnsName is null ? "not found; using the address" : "found");
+            }
+
+            State.Network = snapshot;
+            if (Persistence.Settings.TailscaleEnabled is null && snapshot.TailscaleAddress is not null) State.TailscaleEnabled = true;
+
+            if ((before.TailscaleAddress is null) != (snapshot.TailscaleAddress is null))
+                Log.LogInformation("Tailscale address {Found}", snapshot.TailscaleAddress is null ? "lost" : "found");
+            var lanBefore = PairingAddress.HasAddress(ConnectionMode.HomeWifi, before);
+            var lanNow = PairingAddress.HasAddress(ConnectionMode.HomeWifi, snapshot);
+            if (lanBefore != lanNow)
+                Log.LogInformation("Home Wi-Fi {Lan}", lanNow ? "available (Private network)" : "not available (no Private network)");
+        }
+        finally
+        {
+            _probeLock.Release();
+        }
     }
 
-    private void OnNetworkAddressChanged(object? sender, EventArgs e) => Task.Run(() =>
+    private void OnNetworkAddressChanged(object? sender, EventArgs e) => RefreshInBackground(firewall: true);
+
+    private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
     {
-        try { RefreshNetwork(); }
-        catch (Exception ex) { Log.LogWarning("Network probe failed: {ErrorType}", ex.GetType().Name); }
-    });
+        if (e.Mode != PowerModes.Resume) return;
+        Log.LogInformation("Resumed from sleep");
+        RefreshInBackground(firewall: true);
+    }
 
     public async ValueTask DisposeAsync()
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         Persistence?.Flush();
         Persistence?.Dispose();
         if (Server is not null)
