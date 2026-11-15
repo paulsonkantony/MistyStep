@@ -1,6 +1,8 @@
 using System.Net;
 using MistyStep.Core.Auth;
 using MistyStep.Core.Models;
+using MistyStep.Core.Network;
+using MistyStep.Core.Pairing;
 using MistyStep.Core.Settings;
 using MistyStep.Core.Store;
 using MistyStep.Core.Tests.Support;
@@ -135,5 +137,47 @@ public class FetchFeedbackTests
         seen = null;
         registry.RecordDelivery("unknown", "item-2");
         Assert.Null(seen);
+    }
+}
+
+public class DiagnosticsTests
+{
+    private readonly FakeClock _clock = new();
+
+    [Fact]
+    public void Diagnostics_hold_no_token_hash_or_code()
+    {
+        var registry = new DeviceRegistry(_clock);
+        var code = registry.CreatePairingCode("http://100.101.102.103:45654", "PC");
+        var redeemed = Assert.IsType<RedeemResult.Redeemed>(registry.Redeem(code.Code, IPAddress.Parse("100.64.0.9"), "Mozilla/5.0 (iPad)"));
+        Assert.True(SetupCode.TryDecode(redeemed.SetupCode, out var info));
+        var pending = registry.CreatePairingCode("http://100.101.102.103:45654", "PC");
+        var hash = registry.ToRecords().Single().TokenHash;
+
+        var text = Diagnostics.Build(new DiagnosticsInputs(
+            "0.1.0", "Windows 11", true, null, 45654, true, false,
+            new NetworkSnapshot(IPAddress.Parse("100.101.102.103"), "pc.tailnet.ts.net", "PC", []),
+            FirewallState.Ok, CaptureMode.Automatic, "Not paused", 10, registry.Devices, _clock.UtcNow));
+
+        Assert.DoesNotContain(info!.Token, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(hash, text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(code.Code, text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(pending.Code, text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Misty Step 0.1.0", text, StringComparison.Ordinal);
+        Assert.Contains("Windows Firewall: ok", text, StringComparison.Ordinal);
+        Assert.Contains("Devices (1)", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Diagnostics_mark_the_failing_check_and_skip_later_ones()
+    {
+        var text = Diagnostics.Build(new DiagnosticsInputs(
+            "0.1.0", "Windows 11", true, "Port 45654 is already in use", 45654, true, false,
+            NetworkSnapshot.Empty("PC"), FirewallState.MissingRule, CaptureMode.Manual, "Not paused", 0, [], _clock.UtcNow));
+
+        Assert.Contains("Clipboard listener: ok", text, StringComparison.Ordinal);
+        Assert.Contains("Sharing server: FAIL (Port 45654 is already in use)", text, StringComparison.Ordinal);
+        Assert.Contains("Windows Firewall: not checked", text, StringComparison.Ordinal);
+        Assert.Contains("lasts until replaced", text, StringComparison.Ordinal);
     }
 }

@@ -11,8 +11,8 @@ namespace MistyStep.App.UI;
 
 /// <summary>
 /// Help and troubleshooting: the four health checks, addresses, port and firewall state, the log folder,
-/// a few tips, and the About section with version and credits. Everything stays on this PC: there is no
-/// way to send a report anywhere (owner decision, 2026-11-14).
+/// diagnostic details for the user's own troubleshooting, a few tips, and the About section with version and
+/// credits. Everything stays on this PC: there is no way to send a report anywhere (owner decision, 2026-11-14).
 /// </summary>
 internal sealed class HelpForm : Form
 {
@@ -21,6 +21,15 @@ internal sealed class HelpForm : Form
     private readonly Label _checks = new() { AutoSize = true, MaximumSize = new Size(500, 0) };
     private readonly Label _connection = new() { AutoSize = true, MaximumSize = new Size(500, 0) };
     private readonly Button _fixFirewall = new() { AutoSize = true, Text = "Fix firewall (needs admin)", Visible = false };
+    private readonly TextBox _details = new()
+    {
+        Multiline = true,
+        ReadOnly = true,
+        ScrollBars = ScrollBars.Both,
+        WordWrap = false,
+        Size = new Size(500, 160),
+        Font = new Font(FontFamily.GenericMonospace, 8.5f),
+    };
 
     public HelpForm(AppHost host, Func<bool> listenerRegistered)
     {
@@ -69,6 +78,7 @@ internal sealed class HelpForm : Form
         layout.Controls.Add(Group("Health", _checks));
         layout.Controls.Add(Group("Connection", _connection));
         layout.Controls.Add(actions);
+        layout.Controls.Add(Group("Diagnostic details", _details));
         layout.Controls.Add(Group("Tips", tips));
         layout.Controls.Add(Group("About", about));
 
@@ -117,6 +127,23 @@ internal sealed class HelpForm : Form
             $"Windows Firewall: {FirewallText(_host.Firewall)}",
             $"Sharing: {ShareStatus.Describe(_host.Store.GetCurrent(), _host.Pause.Current, _host.Clock.MonotonicMs)}");
         _fixFirewall.Visible = _host.Firewall is FirewallState.MissingRule or FirewallState.Blocked;
+
+        var c = _host.Persistence.Settings;
+        _details.Text = Diagnostics.Build(new DiagnosticsInputs(
+            _host.Version,
+            System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+            _listenerRegistered(),
+            _host.ServerError,
+            state.Port,
+            state.TailscaleEnabled,
+            state.LanEnabled,
+            network,
+            _host.Firewall,
+            c.Mode,
+            ShareStatus.Describe(new ClipSnapshot(null, Core.Models.NoneReason.Empty), _host.Pause.Current, _host.Clock.MonotonicMs),
+            c.ExpiryMinutes,
+            _host.Registry.Devices,
+            _host.Clock.UtcNow)).ReplaceLineEndings(Environment.NewLine);
     }
 
     private static string FirewallText(FirewallState state) => state switch

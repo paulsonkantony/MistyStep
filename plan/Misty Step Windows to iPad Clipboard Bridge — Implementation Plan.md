@@ -402,7 +402,7 @@ A clipboard regularly holds passwords and private text. The design therefore tre
 - Validate the `Host` header against: the Tailscale address and MagicDNS name, `<hostname>.local`, current LAN addresses, `localhost` and `127.0.0.1`, each with the configured port.
 - Make no outbound network calls except the update check, which the user opts into during first run.
 - No telemetry of any kind. State this in `PRIVACY.md`.
-- No reporting of any kind: no crash reports, no diagnostics export, no contact for reports, no issue templates asking for logs (owner decision, 2026-11-14: the owner receives no reports).
+- No reporting of any kind: no crash reports, no sending or sharing of diagnostics, no contact for reports, no issue templates asking for logs (owner decision, 2026-11-14: the owner receives no reports). Local diagnostics shown on the PC for the user's own troubleshooting are fine.
 
 ## Robustness
 
@@ -464,7 +464,7 @@ Quit
 - Devices window: name, last seen, items fetched, Rename, Revoke.
 - Fetch feedback: the tray icon pulses when a device fetches. An optional toast says "iPad fetched an image".
 - First-run wizard: welcome, Start with Windows, update-check opt-in, then straight into pairing.
-- Troubleshooting window: the four health checks, current addresses, port and firewall state, Fix firewall, and the log folder. Nothing can be sent or exported from it (see Security model).
+- Troubleshooting window: the four health checks, current addresses, port and firewall state, Fix firewall, the log folder, and a read-only diagnostic details summary for the user's own troubleshooting. Nothing is sent anywhere (see Security model).
 - Tray hints when a copy was skipped for size. No hint for secrets or excluded apps.
 - Light and dark tray icons at 100 to 200 percent scaling.
 
