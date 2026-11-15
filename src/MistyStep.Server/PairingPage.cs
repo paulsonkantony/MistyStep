@@ -35,16 +35,23 @@ internal static class PairingPage
 
         var body = $$"""
             <h1>Pair with {{Encode(pcName)}}</h1>
-            <p class="lead">This device is paired as <strong>{{Encode(deviceName)}}</strong>. Three steps to finish:</p>
+            <p class="lead">This device is paired as <strong>{{Encode(deviceName)}}</strong>.</p>
+            <p><strong>What you are setting up.</strong> Misty Step brings what you copy on your PC to this device. On this side it uses a
+              <strong>Shortcut</strong>: a small set of steps you create once in Apple's <strong>Shortcuts</strong> app, which comes with every
+              iPad and iPhone (swipe down on the Home Screen and search "Shortcuts" if you can't find it). Tap the Shortcut and it fetches
+              whatever you last copied on the PC and puts it on this device's clipboard, ready to paste.</p>
+            <p>The <strong>setup code</strong> below tells the Shortcut where your PC is, and holds a private key that lets this device in.
+              You copy it once and put it inside the Shortcut.</p>
             <ol>
               <li>
                 <h2>Copy the setup code</h2>
                 <textarea id="code" readonly rows="4" aria-label="Setup code">{{code}}</textarea>
                 <button id="copy" class="button" type="button">Copy setup code</button>
                 <p id="status" class="note" role="status"></p>
+                <p class="note">You will paste it into the Shortcut in the next step.</p>
               </li>
               <li>
-                <h2>Get the Shortcut</h2>
+                <h2>{{(hasLink ? "Get the Shortcut" : "Create the Shortcut")}}</h2>
                 {{getShortcut}}
               </li>
               <li>
@@ -72,13 +79,13 @@ internal static class PairingPage
 
     /// <summary>The Shortcut build sheet (mirrors shortcut/BUILD.md, Shortcut version 1).</summary>
     private const string BuildSteps = """
-        <p>Apple does not let apps install shortcuts, so this one is built by hand once (about 15 minutes). After that it can be shared as a one-tap iCloud link.</p>
+        <p>Apple does not let apps install Shortcuts for you, so this one is created by hand once (about 15 minutes). Once someone has made it, they can share it as a link that installs in one tap.</p>
         <p class="note">Do the first action right away, while the setup code is on your clipboard: this page stops working after 10 minutes. If it does, start a new pairing on the PC.</p>
         <details open>
           <summary>Build steps</summary>
           <p>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong>, and name it <strong>Paste from PC</strong>. Add these actions in order. Tap a blue placeholder to fill it in; to insert a variable, tap the field and pick it above the keyboard.</p>
           <ol class="steps">
-            <li><b>Text</b>: paste the setup code.</li>
+            <li><b>Text</b>: paste the setup code here. This is where it lives from now on.</li>
             <li><b>Split Text</b>: Separator <b>Custom</b>, a single <code>.</code></li>
             <li><b>Get Item from List</b>: <b>Item At Index</b>, <code>2</code>.</li>
             <li><b>Base64 Encode</b>: tap Encode and change it to <b>Decode</b>.</li>

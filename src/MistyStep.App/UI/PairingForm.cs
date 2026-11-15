@@ -144,8 +144,12 @@ internal sealed class PairingForm : Form
         _qr.Image?.Dispose();
         _qr.Image = QrImage.Create(pairUrl);
         _url.Text = pairUrl;
-        _instructions.Text = "Scan the code with the Camera app on your iPad, then follow the steps that open in Safari. " +
-                             "Tailscale must be on and signed in on the iPad.";
+        _instructions.Text =
+            "1. Make sure Tailscale is on and signed in on the iPad." + Environment.NewLine +
+            "2. Scan this code with the iPad's Camera app. A page opens in Safari." + Environment.NewLine +
+            "3. That page gives you a setup code and walks you through creating a \"Paste from PC\" Shortcut " +
+            "in Apple's Shortcuts app (a one-tap action on the iPad that fetches what you copied here)." + Environment.NewLine +
+            "4. Run the Shortcut once. This window then shows Paired.";
         ShowCodeArea(true);
         _host.Log.LogInformation("Pairing code created");
         _timer.Start();
@@ -201,8 +205,9 @@ internal sealed class PairingForm : Form
         }
         else
         {
-            _status.Text = $"{device.Name} opened the pairing page. On the device: copy the setup code, add the Shortcut, " +
-                           "and paste the code when asked. This window shows Paired when the Shortcut first runs.";
+            _status.Text = $"{device.Name} opened the pairing page. Follow the steps on that page: copy the setup code, " +
+                           "create the \"Paste from PC\" Shortcut in the Shortcuts app with the code inside it, then run it once. " +
+                           "This window shows Paired when that first run reaches this PC.";
             _cancelPairing.Text = "Cancel pairing (not my device)";
             _cancelPairing.Visible = true;
             SetPrimary(null, null);
