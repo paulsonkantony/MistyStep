@@ -669,7 +669,7 @@ These could not be confirmed from documentation and must be checked on real devi
 
 **Shortcut behaviour (M4)**
 
-- [x] Does "Get Contents of URL" accept plain `http://` to a 100.x address, a MagicDNS name and a `.local` name on current iPadOS? If not, serve HTTPS through Tailscale certificates and drop Home Wi-Fi mode. **Answer (2026-11-14, iPadOS 18):** yes for the 100.x address. MagicDNS and `.local` are checked in M5.
+- [x] Does "Get Contents of URL" accept plain `http://` to a 100.x address, a MagicDNS name and a `.local` name on current iPadOS? If not, serve HTTPS through Tailscale certificates and drop Home Wi-Fi mode. **Answer (2026-11-14, iPadOS 18):** yes for the 100.x address and for the MagicDNS name (pairing page and Shortcut both worked). `.local` is checked with Home Wi-Fi in M5.
 - [x] On a 401 or 429 response, does the Shortcut still receive the JSON body? If not, return 200 with the error JSON. **Answer:** not settled. A revoked device got "Conversion Error: Get Dictionary Value failed because Shortcuts could not convert from Text to Dictionary". The cause was the Shortcut: the `message` lookup read the previous result instead of `Meta`. With that fixed, the alert works over 200. `/v1` errors stay at 200 with the error JSON, which avoids the question; whether a 401 body arrives was not retested. BUILD.md now warns about the lookup.
 - [x] Does the Base64 decode action accept the setup code exactly as specified? **Answer:** yes.
 - [ ] Does "Copy to Clipboard" on a fetched PNG paste as an image in Notes, Mail and Messages? Repeat for JPEG, GIF and WebP. **Partial:** a copied image pastes on the iPad. JPEG, GIF and WebP files are not yet tested.
@@ -681,9 +681,16 @@ These could not be confirmed from documentation and must be checked on real devi
 **Networking (M5)**
 
 - [ ] Does `<hostname>.local` resolve from an iPad on common home routers? If unreliable, default to the IP address.
-- [ ] Which firewall profile does Windows assign to the Tailscale adapter, and does the `profile=any` rule with `remoteip` behave as intended? **Partial (2026-11-14):** on the owner's PC the Tailscale adapter is Private and the Wi-Fi is Public. Windows had auto-created broad "mistystep.exe" allow rules (Private and Public) from its own prompt; the firewall helper replaces them with the two scoped rules.
+- [ ] Which firewall profile does Windows assign to the Tailscale adapter, and does the `profile=any` rule with `remoteip` behave as intended? **Partial (2026-11-14):** on the owner's PC the Tailscale adapter is Private and the Wi-Fi is Public. Windows had auto-created broad "mistystep.exe" allow rules (Private and Public) from its own prompt; the firewall helper replaces them with the two scoped rules. After the helper ran, only the two scoped rules remained for the program, and pairing plus fetching over Tailscale worked through the `profile=any`, `remoteip=100.64.0.0/10` rule.
 - [ ] Does Tailscale on iPadOS stay connected in the background well enough that the Shortcut works without opening the Tailscale app?
 - [ ] Do Tailscale's current plan terms cover this personal two-device use for free? Check before recommending it in the README.
+
+**Pending M5 manual checks** (owner will run them at home; M5 was merged with these open)
+
+- [ ] Home Wi-Fi on a Private network: set the PC's Wi-Fi to Private, pick Home Wi-Fi in Pair a device, turn Tailscale off on the iPad, and scan. Does the `.local` page open, or only the IP fallback? This also answers the `.local` question above.
+- [ ] The same Wi-Fi switched back to Public must refuse: reloading the pairing page on the iPad no longer loads after about 15 s.
+- [ ] Tailscale with the iPad on cellular, or on another network such as a phone hotspot.
+- [ ] Port scan from another LAN device in Tailscale-only mode. The owner's Wi-Fi is Public, and the Home Wi-Fi rule is off, so connections are expected to fail. From the PC itself, a request to its own Wi-Fi address was dropped.
 
 **Release (M7)**
 
