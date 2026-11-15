@@ -705,9 +705,19 @@ Demonstrated on the owner's PC and iPad: tray menu, pause with auto-resume and t
 
 **Release (M7)**
 
-- [ ] Is the name "Misty Step" free as a trademark, GitHub repository and winget package id?
-- [ ] Is the self-contained build size acceptable? If not, add a small framework-dependent build.
-- [ ] Which signing option applies in the publisher's country?
+- [ ] Is the name "Misty Step" free as a trademark, GitHub repository and winget package id? **Partial:** the owner's repository is `paulsonkantony/MistyStep`. Trademark and winget id not checked.
+- [ ] Is the self-contained build size acceptable? If not, add a small framework-dependent build. **Measured (0.1.0):** installer 56.2 MB (x64) and 53.9 MB (arm64); portable zip 55.6 MB and 53.5 MB; the exe alone is about 61 MB.
+- [x] Which signing option applies in the publisher's country? **Owner decision (2026-11-14):** no signing. The README and release notes explain the SmartScreen dialog and the SHA-256 check.
+
+**M7 decisions (2026-11-14)**
+
+- Public GitHub repository `paulsonkantony/MistyStep`. The release workflow creates a draft release from a `v*` tag; publishing it is manual. Nothing is pushed by the coding model.
+- No iCloud link for the Shortcut (owner decision after M4: a link is tied to the sharer's Apple Account). `shortcutUrl` stays empty, so the pairing page shows the build steps. M7's "download to first paste in under 3 minutes" therefore does not hold; building the Shortcut takes about 15 minutes, once.
+- The installer does not ask about Start with Windows. The first-run window asks instead, so the question appears once. The uninstaller still removes the Run value.
+- The installer runs the app's own `--update-firewall 45654` helper, so both paths write identical rules.
+- The portable zip carries a `MistyStep.portable` marker file beside the exe, which turns on portable mode, because a double-click passes no `--portable` switch.
+- The update check keeps no timestamp on disk: it runs two minutes after start, then every 7 days while the app runs.
+- The installer and release notes show the "built entirely with AI, as is, no support" notice.
 
 **Product decisions for the owner**
 

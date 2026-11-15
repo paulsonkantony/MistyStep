@@ -14,6 +14,10 @@ internal static class Program
     {
         var options = AppOptions.Parse(args);
 
+        // The portable zip ships a marker beside the exe, so a double-click (which passes no switches) is portable too.
+        if (!options.Portable && File.Exists(Path.Combine(AppContext.BaseDirectory, AppOptions.PortableMarker)))
+            options = options with { Portable = true };
+
         // Elevated firewall helper: rewrite the two rules and exit. No mutex, no UI, no settings.
         if (options.UpdateFirewallPort is { } firewallPort)
         {

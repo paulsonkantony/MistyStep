@@ -35,6 +35,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ToolStripMenuItem _modeAutomatic;
     private readonly ToolStripMenuItem _modeManual;
     private readonly ToolStripMenuItem _autostart;
+    private readonly ToolStripMenuItem _update = new() { Visible = false };
+    private readonly UpdateChecker _updateChecker;
     private readonly ClipboardWatcher _watcher;
     private readonly CaptureCoordinator _coordinator;
     private readonly GlobalHotkey _hotkey;
@@ -78,6 +80,7 @@ internal sealed class TrayApp : ApplicationContext
         _autostart = new ToolStripMenuItem("Start with Windows", null, (_, _) => ToggleAutostart());
 
         _menu.Items.Add(_status);
+        _menu.Items.Add(_update);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(_shareNow);
         _menu.Items.Add("Clear shared item", null, (_, _) => ClearSharedItem());
@@ -127,9 +130,35 @@ internal sealed class TrayApp : ApplicationContext
         _host.Registry.Delivered += OnDelivered;
         SystemEvents.SessionEnded += OnSessionEnded;
 
+        _updateChecker = new UpdateChecker(host);
+        _updateChecker.UpdateAvailable += release => _ui.Post(_ => ShowUpdate(release), null);
+
         var hotkeyProblem = ApplyHotkey(_host.Persistence.Settings.Hotkey);
         RefreshStatus();
         ShowStartupNotices(options, hotkeyProblem);
+    }
+
+    /// <summary>A newer release exists: a menu line links to its page. Nothing is downloaded.</summary>
+    private void ShowUpdate(ReleaseInfo release)
+    {
+        if (_update.Visible && _update.Tag is ReleaseInfo shown && shown.Version >= release.Version) return;
+        _update.Text = $"Update available: {release.Tag}...";
+        _update.Tag = release;
+        _update.Visible = true;
+        _update.Click -= OnUpdateClick;
+        _update.Click += OnUpdateClick;
+        Balloon("Update available", $"Misty Step {release.Tag} is available. Click to open its release page.", ToolTipIcon.Info, () => OpenRelease(release));
+    }
+
+    private void OnUpdateClick(object? sender, EventArgs e)
+    {
+        if (_update.Tag is ReleaseInfo release) OpenRelease(release);
+    }
+
+    private static void OpenRelease(ReleaseInfo release)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(release.Url) { UseShellExecute = true }); }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
     }
 
     /// <summary>A second copy of the app was started: open this one's menu instead.</summary>
@@ -154,6 +183,7 @@ internal sealed class TrayApp : ApplicationContext
         _devices?.Close();
         _settings?.Close();
         _help?.Close();
+        _updateChecker.Dispose();
         _hotkey.Dispose();
         _coordinator.Dispose();
         _watcher.Dispose();

@@ -1,0 +1,57 @@
+# On a version tag (v1.2.3): run all tests, build the x64 and arm64 installers and portable zips,
+# compute SHA-256 checksums, and create a DRAFT GitHub release with them. Publishing the draft is manual.
+# The builds are not code-signed (owner decision).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build downloads
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          ./tools/build-release.ps1 -Version $version
+
+      - name: Create draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $sums = Get-Content artifacts/SHA256SUMS.txt -Raw
+          $notes = @"
+          Built entirely with AI, for the author's personal use, and shared in case it helps others.
+          Provided as is: no warranty, no support, and no responsibility taken. The app sends no reports or telemetry.
+
+          **Downloads:** ``-setup.exe`` is the installer (recommended); ``-portable.zip`` runs from any folder.
+          Pick ``x64`` for most PCs, ``arm64`` for Windows on Arm.
+
+          The files are not code-signed, so Windows may show "Windows protected your PC": choose More info, then Run anyway.
+          To check a download, compare ``Get-FileHash <file>`` in PowerShell with:
+
+          ``````
+          $sums
+          ``````
+          "@
+          Set-Content -Path release-notes.md -Value $notes
+          gh release create $tag (Get-ChildItem artifacts -File).FullName --draft --title "Misty Step $tag" --notes-file release-notes.md

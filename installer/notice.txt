@@ -1,0 +1,19 @@
+About Misty Step
+
+Misty Step shares the last text or image you copy on this PC with your iPad or iPhone. On the iPad, a "Paste from PC" Shortcut fetches it with one tap, over Tailscale or your home Wi-Fi.
+
+Please read before installing:
+
+- Built entirely with AI. Every line of code and documentation was written with an AI assistant (Claude Code). The author directed the work and tested it on their own PC and iPad.
+
+- Made for the author's personal use, and shared in case others find it useful.
+
+- Provided as is. There is no warranty and no promise of support, fixes or updates. The author takes no responsibility for any problem it causes. Use it at your own risk.
+
+- No reports and no telemetry. The app sends nothing to the author or anyone else. Its only internet request is an optional weekly check for a new version on GitHub, which is off unless you turn it on.
+
+What this installer does:
+
+- Installs Misty Step into Program Files and adds it to the Start menu.
+- Adds two Windows Firewall rules that let only your Tailscale devices, and devices on a Private home network, reach Misty Step's port (45654).
+- The uninstaller removes those rules and the "Start with Windows" entry, and asks whether to delete settings.

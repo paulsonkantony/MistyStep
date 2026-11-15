@@ -8,6 +8,9 @@ namespace MistyStep.App;
 /// </summary>
 internal sealed record AppOptions(bool Minimized, bool Portable, bool DebugLogging, int? UpdateFirewallPort = null)
 {
+    /// <summary>A file beside the exe that turns on portable mode (the portable zip ships it).</summary>
+    public const string PortableMarker = "MistyStep.portable";
+
     public static AppOptions Parse(string[] args)
     {
         var minimized = false;
