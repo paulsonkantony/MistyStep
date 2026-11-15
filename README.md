@@ -8,12 +8,12 @@
 
 A tiny tray app that hands the last text or image you copied to your iPad or iPhone, in one tap.
 
-[![Latest release](https://img.shields.io/github/v/release/paulsonkantony/MistyStep?label=download&color=2457D6)](https://github.com/paulsonkantony/MistyStep/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/paulsonkantony/MistyStep?include_prereleases&label=download&color=2457D6)](https://github.com/paulsonkantony/MistyStep/releases)
 [![Build](https://github.com/paulsonkantony/MistyStep/actions/workflows/build.yml/badge.svg)](https://github.com/paulsonkantony/MistyStep/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2457D6)](LICENSE)
 ![Windows 11](https://img.shields.io/badge/Windows-11-2457D6)
 
-[**Download**](https://github.com/paulsonkantony/MistyStep/releases/latest) · [Quick start](#quick-start) · [Privacy](docs/PRIVACY.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
+[**Download**](https://github.com/paulsonkantony/MistyStep/releases) · [Quick start](#quick-start) · [Privacy](docs/PRIVACY.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 </div>
 
@@ -41,7 +41,7 @@ Misty Step sits in the notification area and keeps the last thing you copied: te
 
 ## Quick start
 
-1. **Install.** Download `MistyStep-<version>-x64-setup.exe` from [Releases](https://github.com/paulsonkantony/MistyStep/releases/latest) (`arm64` for Windows on Arm) and run it. Install [Tailscale](https://tailscale.com/download) on the PC and the iPad, and sign in to both with the same account.
+1. **Install.** Download `MistyStep-<version>-x64-setup.exe` from [Releases](https://github.com/paulsonkantony/MistyStep/releases) (`arm64` for Windows on Arm) and run it. Install [Tailscale](https://tailscale.com/download) on the PC and the iPad, and sign in to both with the same account.
 2. **Pair.** Misty Step opens a welcome window, then **Pair a device**. Scan the QR code with the iPad's Camera app. A page opens in Safari with a setup code.
 3. **Create the Shortcut.** Follow the steps on that page (also in [`shortcut/BUILD.md`](shortcut/BUILD.md)) to build **Paste from PC** in Apple's Shortcuts app, with the setup code inside it. It takes about 15 minutes, once. Run it once and choose **Always Allow**.
 
