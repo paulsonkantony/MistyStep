@@ -16,9 +16,22 @@ internal static class PairingPage
     public static Task WriteSetupAsync(HttpContext context, string setupCode, string deviceName, string pcName, string? shortcutUrl)
     {
         var code = Encode(setupCode);
-        var getShortcut = shortcutUrl is not null && Uri.TryCreate(shortcutUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
-            ? $"""<a class="button" href="{Encode(shortcutUrl)}">Get the Shortcut</a>"""
-            : """<p class="note">Install the "Paste from PC" Shortcut. Ask whoever shared Misty Step with you for the link.</p>""";
+        var hasLink = shortcutUrl is not null && Uri.TryCreate(shortcutUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+        // With a published iCloud link the Shortcut installs in one tap and its import question asks for the code.
+        // Without one (before the link exists, or in a fork) the page carries the full build sheet.
+        var getShortcut = hasLink
+            ? $"""<a class="button" href="{Encode(shortcutUrl!)}">Get the Shortcut</a>"""
+            : BuildSteps;
+        var finish = hasLink
+            ? """
+              <h2>Paste the code</h2>
+              <p>When the Shortcut asks for the setup code, paste it. Run it once and choose <strong>Always Allow</strong>. Then run "Paste from PC" any time to bring over what you copied on the PC.</p>
+              """
+            : """
+              <h2>Run it once</h2>
+              <p>Tap ▶ in the Shortcut editor and choose <strong>Always Allow</strong> when asked to connect. Your PC then shows <strong>Paired</strong>. Run "Paste from PC" any time to bring over what you copied on the PC.</p>
+              """;
 
         var body = $$"""
             <h1>Pair with {{Encode(pcName)}}</h1>
@@ -35,8 +48,7 @@ internal static class PairingPage
                 {{getShortcut}}
               </li>
               <li>
-                <h2>Paste the code</h2>
-                <p>When the Shortcut asks for the setup code, paste it. Then run "Paste from PC" any time to bring over what you copied on the PC.</p>
+                {{finish}}
               </li>
             </ol>
             <p class="note">Keep the setup code private: it lets a device read what you copy on your PC. This page stops working in 10 minutes.</p>
@@ -57,6 +69,34 @@ internal static class PairingPage
             """;
         return WriteAsync(context, StatusCodes.Status200OK, "Pair with Misty Step", body);
     }
+
+    /// <summary>The Shortcut build sheet (mirrors shortcut/BUILD.md, Shortcut version 1).</summary>
+    private const string BuildSteps = """
+        <p>Apple does not let apps install shortcuts, so this one is built by hand once (about 15 minutes). After that it can be shared as a one-tap iCloud link.</p>
+        <p class="note">Do the first action right away, while the setup code is on your clipboard: this page stops working after 10 minutes. If it does, start a new pairing on the PC.</p>
+        <details open>
+          <summary>Build steps</summary>
+          <p>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong>, and name it <strong>Paste from PC</strong>. Add these actions in order. Tap a blue placeholder to fill it in; to insert a variable, tap the field and pick it above the keyboard.</p>
+          <ol class="steps">
+            <li><b>Text</b>: paste the setup code.</li>
+            <li><b>Split Text</b>: Separator <b>Custom</b>, a single <code>.</code></li>
+            <li><b>Get Item from List</b>: <b>Item At Index</b>, <code>2</code>.</li>
+            <li><b>Base64 Encode</b>: tap Encode and change it to <b>Decode</b>.</li>
+            <li><b>Get Dictionary from Input</b>, then <b>Set Variable</b> <code>Config</code>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>u</code> in Config, then <b>Set Variable</b> <code>BaseUrl</code>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>t</code> in Config, then <b>Set Variable</b> <code>Token</code>.</li>
+            <li><b>If</b> <i>Shortcut Input</i> <b>is</b> <code>auto</code>: <b>Text</b> <code>1</code> → <b>Set Variable</b> <code>New</code>; <b>Text</b> <code>1</code> → <b>Set Variable</b> <code>Quiet</code>. <b>Otherwise</b>: the same with <code>0</code>. <b>End If</b>. At the top of the editor set <b>Receive Text from Nowhere</b>, and <b>If there's no input: Continue</b>.</li>
+            <li><b>Text</b>: <i>BaseUrl</i><code>/v1/meta?new=</code><i>New</i> (no spaces).</li>
+            <li><b>Get Contents of URL</b>: URL <i>Text</i>. <b>Show More</b>: Method <b>GET</b>; add headers <code>Authorization</code> = <code>Bearer</code>, one space, <i>Token</i>; and <code>X-MistyStep-Shortcut</code> = <code>1</code>.</li>
+            <li><b>Get Dictionary from Input</b>, then <b>Set Variable</b> <code>Meta</code>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>error</code> in Meta. <b>If</b> it <b>has any value</b>: <b>Get Dictionary Value</b> key <code>message</code> in Meta, <b>Show Alert</b> with it, <b>Stop This Shortcut</b>. <b>End If</b>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>type</code> in Meta → <b>Set Variable</b> <code>Type</code>. Key <code>pc</code> → <b>Set Variable</b> <code>PC</code>.</li>
+            <li><b>If</b> Type <b>is</b> <code>text</code>: <b>Get Dictionary Value</b> key <code>text</code> in Meta, <b>Copy to Clipboard</b>, and if Quiet <b>is not</b> <code>1</code>, <b>Show Notification</b> "Text copied from <i>PC</i>".</li>
+            <li><b>Otherwise</b>, <b>If</b> Type <b>is</b> <code>image</code>: <b>Get Dictionary Value</b> key <code>id</code> in Meta; <b>Text</b> <i>BaseUrl</i><code>/v1/data?id=</code><i>Dictionary Value</i>; <b>Get Contents of URL</b> with the same GET method and two headers; <b>Copy to Clipboard</b>; if Quiet is not 1, notify "Image copied from <i>PC</i>". <b>Otherwise</b>: if Quiet is not 1, notify "Nothing new on <i>PC</i>". Close both <b>End If</b>s.</li>
+          </ol>
+          <p class="note">Optional near-automatic mode: in Shortcuts, Automation → + → App → pick the apps you paste into → Is Opened → Run Immediately, with one action: Run Shortcut "Paste from PC" with input <code>auto</code>.</p>
+        </details>
+        """;
 
     public static Task WriteGoneAsync(HttpContext context) => WriteAsync(context, StatusCodes.Status410Gone, "Pairing link expired", """
         <h1>This pairing link no longer works</h1>
@@ -94,6 +134,11 @@ internal static class PairingPage
               textarea { width: 100%; font: 15px/1.4 ui-monospace, Menlo, monospace; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); resize: none; word-break: break-all; -webkit-user-select: text; user-select: text; }
               .button { display: block; width: 100%; min-height: 52px; margin: 12px 0 0; padding: 14px 16px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-fg); font: 600 18px/1.3 -apple-system, system-ui, sans-serif; text-align: center; text-decoration: none; cursor: pointer; }
               .note { color: var(--muted); font-size: 15px; margin: 8px 0 0; }
+              details { margin: 12px 0 0; }
+              summary { min-height: 44px; padding: 10px 0; font-weight: 600; cursor: pointer; }
+              ol.steps { list-style: decimal; padding-left: 22px; margin: 8px 0; }
+              ol.steps li { counter-increment: none; background: none; border: 0; border-radius: 0; padding: 0; margin: 0 0 10px; }
+              code { font: 15px ui-monospace, Menlo, monospace; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
             </style>
             </head>
             <body>

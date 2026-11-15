@@ -122,6 +122,31 @@ public sealed partial class PairingPageTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Without_a_link_the_page_carries_the_build_steps()
+    {
+        using var response = await _app.CreateClient().GetAsync($"/pair?c={NewCode()}", Ct);
+        var html = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Contains("Build steps", html, StringComparison.Ordinal);
+        Assert.Contains("Get Contents of URL", html, StringComparison.Ordinal);
+        Assert.Contains("X-MistyStep-Shortcut", html, StringComparison.Ordinal);
+        Assert.Contains("Run it once", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Get the Shortcut</a>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task With_a_link_the_page_offers_one_tap_install_instead_of_build_steps()
+    {
+        _app.State.ShortcutUrl = "https://www.icloud.com/shortcuts/abc123";
+        using var response = await _app.CreateClient().GetAsync($"/pair?c={NewCode()}", Ct);
+        var html = await response.Content.ReadAsStringAsync(Ct);
+
+        Assert.Contains("Get the Shortcut</a>", html, StringComparison.Ordinal);
+        Assert.Contains("Paste the code", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build steps", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Shortcut_link_is_shown_only_when_it_is_https()
     {
         _app.State.ShortcutUrl = "https://www.icloud.com/shortcuts/abc123";
