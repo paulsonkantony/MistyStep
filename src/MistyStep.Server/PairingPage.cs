@@ -90,7 +90,7 @@ internal static class PairingPage
         <details open>
           <summary>Build steps</summary>
           <p>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong>, and name it <strong>Paste from PC</strong>. Add these actions in order.</p>
-          <p class="note"><b>Adding an action:</b> tap the search bar at the bottom, type its name, tap it. New actions go to the bottom; press and hold one to drag it inside an <b>If</b> (between <b>If</b> and <b>Otherwise</b>). <b>Inserting a variable</b> (the blue <i>words</i>): tap the field and pick it in the row above the keyboard, or tap <b>Select Variable</b>.</p>
+          <p class="note"><b>Adding an action:</b> tap the search bar at the bottom, type its name, tap it. New actions go to the bottom; press and hold one to drag it inside an <b>If</b> (between <b>If</b> and <b>Otherwise</b>). <b>Inserting a variable</b> (the blue <i>words</i>): tap the field and pick it in the row above the keyboard, or tap <b>Select Variable</b>. <b>Check every "in <i>Meta</i>":</b> a new action is fed the result of the action above it, so a <b>Get Dictionary Value</b> often starts out reading <i>Dictionary Value</i>. Tap that blue word and choose <i>Meta</i>.</p>
           <ol class="steps">
             <li><b>Text</b>: paste the setup code here. This is where it lives from now on.</li>
             <li><b>Split Text</b>: Separator <b>Custom</b>, a single <code>.</code></li>
@@ -103,7 +103,7 @@ internal static class PairingPage
             <li><b>Text</b>: insert <i>BaseUrl</i>, type <code>/v1/meta?new=</code>, insert <i>New</i>. No spaces.</li>
             <li><b>Get Contents of URL</b> (it picks up the Text). Tap ▸ to show more. Method <b>GET</b>. <b>Add new header</b>: key <code>Authorization</code>, value <code>Bearer</code> + one space + <i>Token</i>. <b>Add new header</b>: key <code>X-MistyStep-Shortcut</code>, value <code>1</code>.</li>
             <li><b>Get Dictionary from Input</b>, then <b>Set Variable</b> <code>Meta</code>.</li>
-            <li><b>Get Dictionary Value</b>: key <code>error</code> in <i>Meta</i>. Then <b>If</b>, condition <b>has any value</b> (leave <b>Otherwise</b> empty). Inside the If: <b>Get Dictionary Value</b> key <code>message</code> in <i>Meta</i>; <b>Show Alert</b> with <i>Dictionary Value</i>; <b>Stop This Shortcut</b>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>error</code> in <i>Meta</i>. Then <b>If</b>, condition <b>has any value</b> (leave <b>Otherwise</b> empty). Inside the If: <b>Get Dictionary Value</b> key <code>message</code> in <i>Meta</i> (not <i>Dictionary Value</i>); <b>Show Alert</b> with <i>Dictionary Value</i>; <b>Stop This Shortcut</b>.</li>
             <li><b>Get Dictionary Value</b>: key <code>type</code> in <i>Meta</i> → <b>Set Variable</b> <code>Type</code>. <b>Get Dictionary Value</b>: key <code>pc</code> in <i>Meta</i> → <b>Set Variable</b> <code>PC</code>.</li>
             <li><b>Text</b>: <code>Nothing new on </code><i>PC</i> → <b>Set Variable</b> <code>Note</code>.</li>
             <li><b>If</b> <i>Type</i> <b>is</b> <code>text</code>. Inside: <b>Get Dictionary Value</b> key <code>text</code> in <i>Meta</i>; <b>Copy to Clipboard</b>; <b>Text</b> <code>Text copied from </code><i>PC</i>; <b>Set Variable</b> <code>Note</code>.</li>

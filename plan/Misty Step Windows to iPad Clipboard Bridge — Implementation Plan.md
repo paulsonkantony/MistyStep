@@ -241,7 +241,7 @@ The server exposes four GET routes on one port (default 45654) and accepts no re
 - `?new=1` makes the server answer `unchanged` when this device already received the current item. The server tracks this per device, so the Shortcut stores no state.
 - An item counts as delivered when `/v1/meta` returns it as text, or when `/v1/data` finishes writing the body.
 - `/v1/data` always serves the current image. An optional `?id=` is logged for diagnostics only.
-- Errors on `/v1` use the JSON shape above with HTTP status 200, because the Shortcut does not receive the body of a 401 (M4 finding). Error codes: `unauthorized`, `rate_limited`. Where this plan says "answer 429" or "401", read it as that error body. The HTML pairing page keeps its 410 and 429 statuses.
+- Errors on `/v1` use the JSON shape above with HTTP status 200. A 200 always reaches the Shortcut, while a 401 body may not (see the M4 open questions). Error codes: `unauthorized`, `rate_limited`. Where this plan says "answer 429" or "401", read it as that error body. The HTML pairing page keeps its 410 and 429 statuses.
 
 **Request pipeline, in order**
 
@@ -669,7 +669,7 @@ These could not be confirmed from documentation and must be checked on real devi
 **Shortcut behaviour (M4)**
 
 - [x] Does "Get Contents of URL" accept plain `http://` to a 100.x address, a MagicDNS name and a `.local` name on current iPadOS? If not, serve HTTPS through Tailscale certificates and drop Home Wi-Fi mode. **Answer (2026-11-14, iPadOS 18):** yes for the 100.x address. MagicDNS and `.local` are checked in M5.
-- [x] On a 401 or 429 response, does the Shortcut still receive the JSON body? If not, return 200 with the error JSON. **Answer:** no. A revoked device got "Conversion Error: Get Dictionary Value failed because Shortcuts could not convert from Text to Dictionary". `/v1` errors now return 200 with the error JSON.
+- [x] On a 401 or 429 response, does the Shortcut still receive the JSON body? If not, return 200 with the error JSON. **Answer:** not settled. A revoked device got "Conversion Error: Get Dictionary Value failed because Shortcuts could not convert from Text to Dictionary". The cause was the Shortcut: the `message` lookup read the previous result instead of `Meta`. With that fixed, the alert works over 200. `/v1` errors stay at 200 with the error JSON, which avoids the question; whether a 401 body arrives was not retested. BUILD.md now warns about the lookup.
 - [x] Does the Base64 decode action accept the setup code exactly as specified? **Answer:** yes.
 - [ ] Does "Copy to Clipboard" on a fetched PNG paste as an image in Notes, Mail and Messages? Repeat for JPEG, GIF and WebP. **Partial:** a copied image pastes on the iPad. JPEG, GIF and WebP files are not yet tested.
 - [x] Which permission prompts appear on first run, and does "Always Allow" make later runs silent? **Answer:** a single Allow prompt to connect; later runs are silent.

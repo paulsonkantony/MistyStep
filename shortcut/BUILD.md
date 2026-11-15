@@ -17,6 +17,8 @@ Action names are from iPadOS 18. If a name differs on your version, search for t
 
 Tip: after adding an action, tap a blue placeholder to fill it in. To insert a variable, tap the field, then choose the variable above the keyboard (or tap **Select Variable**).
 
+**Check every "in *Meta*".** Shortcuts feeds each new action the result of the action just above it. So a new **Get Dictionary Value** often starts out reading *Dictionary Value* instead of *Meta*. Tap that blue word and choose *Meta*. The error block in step 14 is the easy one to miss: a normal run skips it, and the mistake only shows up later as "could not convert from Text to Dictionary".
+
 ## Actions
 
 ### Read the setup code
@@ -62,7 +64,7 @@ New actions always go to the bottom. To put one inside an **If**, press and hold
 
 13. **Get Dictionary Value**. Get **Value** for key `error` in `Meta`.
 14. **If**. *Dictionary Value* **has any value**. Inside it:
-    - **Get Dictionary Value**. Get **Value** for key `message` in `Meta`.
+    - **Get Dictionary Value**. Get **Value** for key `message` in `Meta`. Make sure it says `Meta`, not *Dictionary Value*.
     - **Show Alert**. Message: *Dictionary Value*. Turn **Show Cancel Button** off.
     - **Stop This Shortcut**
 
