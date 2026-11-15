@@ -7,10 +7,12 @@ using MistyStep.Core.Auth;
 using MistyStep.Core.Capture;
 using MistyStep.Core.Config;
 using MistyStep.Core.Network;
+using MistyStep.Core.Settings;
 using MistyStep.Core.Store;
 using MistyStep.Core.Time;
 using MistyStep.Server;
 using MistyStep.Windows.Network;
+using MistyStep.Windows.Shell;
 
 namespace MistyStep.App;
 
@@ -51,13 +53,29 @@ internal sealed class AppHost : IAsyncDisposable
         var fileLogs = new RollingFileLoggerProvider(paths.LogDirectory);
         var loggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => ConfigureLogging(builder, fileLogs, level));
 
-        var host = new AppHost(fileLogs, loggerFactory);
+        var host = new AppHost(fileLogs, loggerFactory) { Options = options, Paths = paths };
         host.Initialize(paths, fileLogs, level);
         return host;
     }
 
+    public AppOptions Options { get; private init; } = null!;
+    public AppPaths Paths { get; private init; } = null!;
+
+    /// <summary>Pause sharing (with auto-resume) and the serve-while-locked rule.</summary>
+    public PauseController Pause { get; private set; } = null!;
+
+    /// <summary>Raised when something the tray shows changed outside the tray: pause ended, screen lock, port.</summary>
+    public event Action? StateChanged;
+
+    /// <summary>Raised for an unexpected error the user should hear about (the details go to the log only).</summary>
+    public event Action<string>? ProblemReported;
+
+    private ServerDependencies _deps = null!;
+    private LogLevel _level;
+
     private void Initialize(AppPaths paths, RollingFileLoggerProvider fileLogs, LogLevel level)
     {
+        _level = level;
         Log.LogInformation("Starting Misty Step {Version}", Version);
 
         var configStore = new ConfigStore(paths.ConfigFile, Clock);
@@ -83,32 +101,109 @@ internal sealed class AppHost : IAsyncDisposable
             network.TailscaleAddress is null ? "not found" : "found",
             PairingAddress.HasAddress(ConnectionMode.HomeWifi, network) ? "available" : "not available (no Private network)");
 
-        var deps = new ServerDependencies(Store, Registry, new AuthLockout(Clock), new DeviceRateLimiter(Clock), Clock, State);
-        try
-        {
-            Server = ServerHost.StartAsync(deps, builder =>
-            {
-                builder.AddProvider(fileLogs);
-                builder.SetMinimumLevel(level);
-            }).GetAwaiter().GetResult();
-            Log.LogInformation("Listening on port {Port}", config.Port);
-        }
-        catch (PortInUseException)
-        {
-            ServerError = $"Port {config.Port} is already in use";
-            Log.LogError("Port {Port} is already in use", config.Port);
-        }
-        catch (Exception ex)
-        {
-            ServerError = "The sharing server could not start";
-            Log.LogError(ex, "Server failed to start");
-        }
+        Pause = new PauseController(Clock) { ServeWhileLocked = config.ServeWhileLocked };
+
+        _deps = new ServerDependencies(Store, Registry, new AuthLockout(Clock), new DeviceRateLimiter(Clock), Clock, State);
+        StartServerAsync().GetAwaiter().GetResult();
 
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.SessionSwitch += OnSessionSwitch;
+
+        // Windows restarts the app after a crash or hang (it must have run for at least 60 s).
+        if (!RestartManager.Register("--minimized" + (Options.Portable ? " --portable" : "")))
+            Log.LogWarning("Could not register for restart after a crash");
 
         // The MagicDNS name and firewall state take a process run and a COM walk: fetch them off the UI thread.
         RefreshInBackground(firewall: true);
+    }
+
+    private async Task StartServerAsync()
+    {
+        var port = State.Port;
+        try
+        {
+            Server = await ServerHost.StartAsync(_deps, builder =>
+            {
+                builder.AddProvider(_fileLogs);
+                builder.SetMinimumLevel(_level);
+            }).ConfigureAwait(false);
+            ServerError = null;
+            Log.LogInformation("Listening on port {Port}", port);
+        }
+        catch (PortInUseException)
+        {
+            Server = null;
+            ServerError = $"Port {port} is already in use";
+            Log.LogError("Port {Port} is already in use", port);
+        }
+        catch (Exception ex)
+        {
+            Server = null;
+            ServerError = "The sharing server could not start";
+            Log.LogError(ex, "Server failed to start");
+        }
+    }
+
+    /// <summary>
+    /// Moves the server to a new port in place: stop, save, start again. Paired devices keep the old port
+    /// in their setup code, so they show as needing to pair again. The firewall rules are the caller's job.
+    /// </summary>
+    public async Task ChangePortAsync(int port)
+    {
+        if (port == State.Port) return;
+        if (Server is not null)
+        {
+            try { await Server.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception ex) { Log.LogWarning("Server shutdown: {ErrorType}", ex.GetType().Name); }
+            Server = null;
+        }
+
+        State.Port = port;
+        Persistence.Update(c => c with { Port = port });
+        Log.LogInformation("Port changed to {Port}", port);
+        await StartServerAsync().ConfigureAwait(false);
+        RefreshFirewall();
+        StateChanged?.Invoke();
+        NetworkChanged?.Invoke();
+    }
+
+    /// <summary>Copies the pause state to the server. Call after any pause, resume, lock or setting change.</summary>
+    public void SyncPause()
+    {
+        var paused = Pause.Current.IsPaused;
+        if (State.Paused == paused) return;
+        State.Paused = paused;
+        Log.LogInformation("Sharing {State}", paused ? "paused" : "resumed");
+    }
+
+    /// <summary>Applies changed settings (from the Settings window) and saves them.</summary>
+    public void ApplySettings(Func<AppConfig, AppConfig> change)
+    {
+        Persistence.Update(change);
+        var c = Persistence.Settings;
+        Store.ExpiryMinutes = c.ExpiryMinutes;
+        State.TailscaleEnabled = c.TailscaleEnabled ?? State.TailscaleEnabled;
+        State.LanEnabled = c.LanEnabled;
+        Pause.ServeWhileLocked = c.ServeWhileLocked;
+        SyncPause();
+        StateChanged?.Invoke();
+    }
+
+    public void ReportProblem(string message) => ProblemReported?.Invoke(message);
+
+    private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
+    {
+        var locked = e.Reason switch
+        {
+            SessionSwitchReason.SessionLock => true,
+            SessionSwitchReason.SessionUnlock => false,
+            _ => (bool?)null,
+        };
+        if (locked is null) return;
+        Pause.ScreenLocked = locked.Value;
+        SyncPause();
+        StateChanged?.Invoke();
     }
 
     /// <summary>The running executable; the firewall rules are scoped to it.</summary>
@@ -250,6 +345,7 @@ internal sealed class AppHost : IAsyncDisposable
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
         Persistence?.Flush();
         Persistence?.Dispose();
         if (Server is not null)

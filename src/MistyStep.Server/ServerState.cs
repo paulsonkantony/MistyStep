@@ -30,18 +30,27 @@ public sealed class ServerState : IServerState
     private volatile bool _paused;
     private volatile bool _tailscaleEnabled;
     private volatile bool _lanEnabled;
+    private volatile int _port;
 
     public ServerState(int port, string pcName, string appVersion, NetworkSnapshot network)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(port, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(port, 65535);
         Port = port;
         AppVersion = appVersion;
         _pcName = pcName;
         _network = network;
     }
 
-    public int Port { get; }
+    /// <summary>Settable so a port change can restart the server in place (devices must pair again).</summary>
+    public int Port
+    {
+        get => _port;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 65535);
+            _port = value;
+        }
+    }
     public string AppVersion { get; }
 
     public string PcName { get => _pcName; set => _pcName = value; }

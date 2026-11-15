@@ -7,6 +7,7 @@ namespace MistyStep.App;
 internal static class Program
 {
     private const string MutexName = @"Local\MistyStep.SingleInstance";
+    private const string ActivateEventName = @"Local\MistyStep.Activate";
 
     [STAThread]
     private static int Main(string[] args)
@@ -21,12 +22,12 @@ internal static class Program
                 : FirewallConfigurator.Apply(exePath, firewallPort);
         }
 
-        // One instance per Windows session. (M6 makes the second instance open the first one's menu.)
+        // One instance per Windows session. A second launch signals the first to open its menu, then exits.
         using var mutex = new Mutex(initiallyOwned: true, MutexName, out var createdNew);
+        using var activate = new EventWaitHandle(false, EventResetMode.AutoReset, ActivateEventName);
         if (!createdNew)
         {
-            MessageBox.Show("Misty Step is already running. Look for its icon in the notification area.", "Misty Step",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            activate.Set();
             return 0;
         }
 
@@ -38,19 +39,27 @@ internal static class Program
         // Started before any control exists, so the server start-up captures no UI synchronization context.
         var host = AppHost.Start(options);
 
-        Application.ThreadException += (_, e) => host.Log.LogError(e.Exception, "Unhandled UI exception");
+        // Logged without content; the tray says something went wrong. Windows restarts the app after a crash.
+        Application.ThreadException += (_, e) =>
+        {
+            host.Log.LogError(e.Exception, "Unhandled UI exception");
+            host.ReportProblem("Something went wrong, but Misty Step is still running. Details are in the log.");
+        };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             if (e.ExceptionObject is Exception ex) host.Log.LogCritical(ex, "Unhandled exception");
         };
 
+        RegisteredWaitHandle? activation = null;
         try
         {
             using var tray = new TrayApp(host, options);
+            activation = ThreadPool.RegisterWaitForSingleObject(activate, (_, _) => tray.OnActivationRequested(), null, Timeout.Infinite, executeOnlyOnce: false);
             Application.Run(tray);
         }
         finally
         {
+            activation?.Unregister(null);
             host.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 

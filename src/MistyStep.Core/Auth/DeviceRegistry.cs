@@ -280,15 +280,21 @@ public sealed class DeviceRegistry(IClock clock) : IDeviceRegistry
 
     public void RecordDelivery(string deviceId, string itemId)
     {
+        string name;
         lock (_gate)
         {
             if (!_byId.TryGetValue(deviceId, out var entry)) return;
             entry.LastDeliveredId = itemId;
             entry.FetchCount++;
+            name = entry.Name;
         }
 
         Changed?.Invoke(RegistryChange.Activity);
+        Delivered?.Invoke(name, itemId);
     }
+
+    /// <summary>A device received an item: (device name, item id). Drives the tray pulse and the optional toast.</summary>
+    public event Action<string, string>? Delivered;
 
     public bool HasReceived(string deviceId, string itemId)
     {
