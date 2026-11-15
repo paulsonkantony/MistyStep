@@ -131,6 +131,8 @@ public sealed partial class PairingPageTests : IAsyncLifetime
         Assert.Contains("Get Contents of URL", html, StringComparison.Ordinal);
         Assert.Contains("X-MistyStep-Shortcut", html, StringComparison.Ordinal);
         Assert.Contains("Run it once", html, StringComparison.Ordinal);
+        Assert.Contains("AssistiveTouch", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Automation", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Get the Shortcut</a>", html, StringComparison.Ordinal);
     }
 

@@ -34,7 +34,7 @@ Tip: after adding an action, tap a blue placeholder to fill it in. To insert a v
 
 The Shortcut runs in one of two modes:
 - **Manual** (no input): always fetches the current item and shows a notification.
-- **auto** (input `auto`): used by the optional automation. It fetches only an item this iPad has not received, and shows no notifications.
+- **auto** (input `auto`): fetches only an item this iPad has not received, and shows no notifications. Nothing on this sheet uses it; it lets another Shortcut call this one quietly.
 
 9. **If**. *Shortcut Input* **is** `auto`.
    - **Text** `1`, then **Set Variable** `New` to *Text*.
@@ -92,25 +92,25 @@ Run the Shortcut once from the editor (the ▶ button). iPadOS asks for permissi
 
 ## Ways to run it
 
-- Home Screen: in the Shortcuts app, long-press **Paste from PC**, then **Share**, then **Add to Home Screen**. A Home Screen widget, the Dock and a Control Center control also work.
+The Shortcut only puts the PC's item on the iPad clipboard. Then long-press where you want it and tap **Paste**. iPadOS cannot run it continuously in the background, so you run it each time you want the latest item. The first two ways below work without leaving the app you're in.
+
+**Floating button (AssistiveTouch)**
+1. Open **Settings**, then **Accessibility**, then **Touch**, then **AssistiveTouch**.
+2. Turn **AssistiveTouch** on. A round button appears on screen. Drag it to any edge.
+3. Under **Custom Actions**, tap **Single-Tap**.
+4. Scroll to the bottom section, **Shortcuts**, and choose **Paste from PC**.
+
+One tap on the round button now runs the Shortcut over any app.
+
+**Control Center button**
+1. Swipe down from the top-right corner of the screen.
+2. Long-press an empty area, then tap **Add a Control**.
+3. Search **Shortcut**, tap **Shortcut**, and choose **Paste from PC**.
+
+**Other ways**
+- Home Screen icon: in the Shortcuts app, long-press **Paste from PC**, then **Share**, then **Add to Home Screen**.
 - Spotlight with a hardware keyboard: Cmd+Space, type "Paste", Return.
 - Siri: "Paste from PC".
-
-## Optional: near-automatic mode
-
-The automation runs the Shortcut quietly whenever you open one of the apps you choose. It only puts the PC's item on the iPad clipboard; it never pastes for you, and nothing appears inside the app. You still long-press and tap **Paste**.
-
-1. In the Shortcuts app, tap **Automation** (bottom bar or sidebar), then **+** (or **New Automation**).
-2. Scroll down and tap **App**.
-3. Tap **Choose** and tick the apps you paste into (for example Notes, Mail, Messages). Tap **Done**.
-4. Make sure **Is Opened** is ticked, and choose **Run Immediately**. Turn **Notify When Run** off if you don't want a banner. Tap **Next**.
-5. Tap **New Blank Automation**. Do not pick **Paste from PC** from the list shown here, because then it cannot be given the `auto` input.
-6. Tap **Add Action**, search **Text**, and add it. Type `auto` in it.
-7. Search **Run Shortcut** and add it. Tap the blue **Shortcut** placeholder and choose **Paste from PC**.
-8. Tap the arrow (**›**) on the Run Shortcut action to show its options. Tap **Input** and choose the *Text* variable.
-9. Tap **Done**.
-
-To test it: copy something new on the PC, then open one of the chosen apps, wait a second, long-press and tap **Paste**. In `auto` mode the Shortcut skips an item this iPad has already fetched, so an item you already pasted with the manual Shortcut is not fetched again. It shows no notification either way.
 
 ## Re-pairing (new PC name, port or address)
 

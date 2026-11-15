@@ -57,6 +57,12 @@ internal static class PairingPage
               <li>
                 {{finish}}
               </li>
+              <li>
+                <h2>Run it without leaving your app</h2>
+                <p><strong>Floating button:</strong> Settings → Accessibility → Touch → AssistiveTouch. Turn it on, then Custom Actions → Single-Tap → (bottom section, Shortcuts) <b>Paste from PC</b>. One tap on the round button fetches from the PC, then long-press and tap Paste.</p>
+                <p><strong>Control Center:</strong> swipe down from the top-right corner, long-press an empty area, tap Add a Control, search Shortcut, tap <b>Shortcut</b> and choose <b>Paste from PC</b>.</p>
+                <p class="note">Also: a Home Screen icon (long-press the Shortcut → Share → Add to Home Screen), Cmd+Space "Paste" on a keyboard, or "Hey Siri, Paste from PC".</p>
+              </li>
             </ol>
             <p class="note">Keep the setup code private: it lets a device read what you copy on your PC. This page stops working in 10 minutes.</p>
             <script>
@@ -104,7 +110,6 @@ internal static class PairingPage
             <li><b>If</b> <i>Type</i> <b>is</b> <code>image</code>. Inside: <b>Get Dictionary Value</b> key <code>id</code> in <i>Meta</i>; <b>Text</b> <i>BaseUrl</i><code>/v1/data?id=</code><i>Dictionary Value</i>; <b>Get Contents of URL</b> with the same two headers; <b>Copy to Clipboard</b>; <b>Text</b> <code>Image copied from </code><i>PC</i>; <b>Set Variable</b> <code>Note</code>.</li>
             <li><b>If</b> <i>Quiet</i> <b>is not</b> <code>1</code>. Inside: <b>Show Notification</b> with <i>Note</i>.</li>
           </ol>
-          <p class="note">Optional near-automatic mode: in Shortcuts, Automation → + → App → pick the apps you paste into → Is Opened → Run Immediately → Next → New Blank Automation. Add two actions: <b>Text</b> <code>auto</code>, then <b>Run Shortcut</b> "Paste from PC" with its Input set to <i>Text</i>. It only copies items this device has not fetched yet, silently; then paste as usual.</p>
         </details>
         """;
 
