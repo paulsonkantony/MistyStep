@@ -83,7 +83,8 @@ internal static class PairingPage
         <p class="note">Do the first action right away, while the setup code is on your clipboard: this page stops working after 10 minutes. If it does, start a new pairing on the PC.</p>
         <details open>
           <summary>Build steps</summary>
-          <p>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong>, and name it <strong>Paste from PC</strong>. Add these actions in order. Tap a blue placeholder to fill it in; to insert a variable, tap the field and pick it above the keyboard.</p>
+          <p>Open the <strong>Shortcuts</strong> app, tap <strong>+</strong>, and name it <strong>Paste from PC</strong>. Add these actions in order.</p>
+          <p class="note"><b>Adding an action:</b> tap the search bar at the bottom, type its name, tap it. New actions go to the bottom; press and hold one to drag it inside an <b>If</b> (between <b>If</b> and <b>Otherwise</b>). <b>Inserting a variable</b> (the blue <i>words</i>): tap the field and pick it in the row above the keyboard, or tap <b>Select Variable</b>.</p>
           <ol class="steps">
             <li><b>Text</b>: paste the setup code here. This is where it lives from now on.</li>
             <li><b>Split Text</b>: Separator <b>Custom</b>, a single <code>.</code></li>
@@ -93,13 +94,15 @@ internal static class PairingPage
             <li><b>Get Dictionary Value</b>: key <code>u</code> in Config, then <b>Set Variable</b> <code>BaseUrl</code>.</li>
             <li><b>Get Dictionary Value</b>: key <code>t</code> in Config, then <b>Set Variable</b> <code>Token</code>.</li>
             <li><b>If</b> <i>Shortcut Input</i> <b>is</b> <code>auto</code>: <b>Text</b> <code>1</code> → <b>Set Variable</b> <code>New</code>; <b>Text</b> <code>1</code> → <b>Set Variable</b> <code>Quiet</code>. <b>Otherwise</b>: the same with <code>0</code>. <b>End If</b>. At the top of the editor set <b>Receive Text from Nowhere</b>, and <b>If there's no input: Continue</b>.</li>
-            <li><b>Text</b>: <i>BaseUrl</i><code>/v1/meta?new=</code><i>New</i> (no spaces).</li>
-            <li><b>Get Contents of URL</b>: URL <i>Text</i>. <b>Show More</b>: Method <b>GET</b>; add headers <code>Authorization</code> = <code>Bearer</code>, one space, <i>Token</i>; and <code>X-MistyStep-Shortcut</code> = <code>1</code>.</li>
+            <li><b>Text</b>: insert <i>BaseUrl</i>, type <code>/v1/meta?new=</code>, insert <i>New</i>. No spaces.</li>
+            <li><b>Get Contents of URL</b> (it picks up the Text). Tap ▸ to show more. Method <b>GET</b>. <b>Add new header</b>: key <code>Authorization</code>, value <code>Bearer</code> + one space + <i>Token</i>. <b>Add new header</b>: key <code>X-MistyStep-Shortcut</code>, value <code>1</code>.</li>
             <li><b>Get Dictionary from Input</b>, then <b>Set Variable</b> <code>Meta</code>.</li>
-            <li><b>Get Dictionary Value</b>: key <code>error</code> in Meta. <b>If</b> it <b>has any value</b>: <b>Get Dictionary Value</b> key <code>message</code> in Meta, <b>Show Alert</b> with it, <b>Stop This Shortcut</b>. <b>End If</b>.</li>
-            <li><b>Get Dictionary Value</b>: key <code>type</code> in Meta → <b>Set Variable</b> <code>Type</code>. Key <code>pc</code> → <b>Set Variable</b> <code>PC</code>.</li>
-            <li><b>If</b> Type <b>is</b> <code>text</code>: <b>Get Dictionary Value</b> key <code>text</code> in Meta, <b>Copy to Clipboard</b>, and if Quiet <b>is not</b> <code>1</code>, <b>Show Notification</b> "Text copied from <i>PC</i>".</li>
-            <li><b>Otherwise</b>, <b>If</b> Type <b>is</b> <code>image</code>: <b>Get Dictionary Value</b> key <code>id</code> in Meta; <b>Text</b> <i>BaseUrl</i><code>/v1/data?id=</code><i>Dictionary Value</i>; <b>Get Contents of URL</b> with the same GET method and two headers; <b>Copy to Clipboard</b>; if Quiet is not 1, notify "Image copied from <i>PC</i>". <b>Otherwise</b>: if Quiet is not 1, notify "Nothing new on <i>PC</i>". Close both <b>End If</b>s.</li>
+            <li><b>Get Dictionary Value</b>: key <code>error</code> in <i>Meta</i>. Then <b>If</b>, condition <b>has any value</b> (leave <b>Otherwise</b> empty). Inside the If: <b>Get Dictionary Value</b> key <code>message</code> in <i>Meta</i>; <b>Show Alert</b> with <i>Dictionary Value</i>; <b>Stop This Shortcut</b>.</li>
+            <li><b>Get Dictionary Value</b>: key <code>type</code> in <i>Meta</i> → <b>Set Variable</b> <code>Type</code>. <b>Get Dictionary Value</b>: key <code>pc</code> in <i>Meta</i> → <b>Set Variable</b> <code>PC</code>.</li>
+            <li><b>Text</b>: <code>Nothing new on </code><i>PC</i> → <b>Set Variable</b> <code>Note</code>.</li>
+            <li><b>If</b> <i>Type</i> <b>is</b> <code>text</code>. Inside: <b>Get Dictionary Value</b> key <code>text</code> in <i>Meta</i>; <b>Copy to Clipboard</b>; <b>Text</b> <code>Text copied from </code><i>PC</i>; <b>Set Variable</b> <code>Note</code>.</li>
+            <li><b>If</b> <i>Type</i> <b>is</b> <code>image</code>. Inside: <b>Get Dictionary Value</b> key <code>id</code> in <i>Meta</i>; <b>Text</b> <i>BaseUrl</i><code>/v1/data?id=</code><i>Dictionary Value</i>; <b>Get Contents of URL</b> with the same two headers; <b>Copy to Clipboard</b>; <b>Text</b> <code>Image copied from </code><i>PC</i>; <b>Set Variable</b> <code>Note</code>.</li>
+            <li><b>If</b> <i>Quiet</i> <b>is not</b> <code>1</code>. Inside: <b>Show Notification</b> with <i>Note</i>.</li>
           </ol>
           <p class="note">Optional near-automatic mode: in Shortcuts, Automation → + → App → pick the apps you paste into → Is Opened → Run Immediately, with one action: Run Shortcut "Paste from PC" with input <code>auto</code>.</p>
         </details>

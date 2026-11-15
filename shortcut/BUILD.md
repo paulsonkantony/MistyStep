@@ -58,32 +58,33 @@ The Shortcut runs in one of two modes:
 
 ### Errors
 
+New actions always go to the bottom. To put one inside an **If**, press and hold it and drag it between **If** and **Otherwise**. Every **If** below leaves its **Otherwise** empty.
+
 13. **Get Dictionary Value**. Get **Value** for key `error` in `Meta`.
-14. **If**. *Dictionary Value* **has any value**.
+14. **If**. *Dictionary Value* **has any value**. Inside it:
     - **Get Dictionary Value**. Get **Value** for key `message` in `Meta`.
     - **Show Alert**. Message: *Dictionary Value*. Turn **Show Cancel Button** off.
     - **Stop This Shortcut**
-    - **End If** (delete the empty **Otherwise** if one was added)
 
 ### Copy the item
 
+The blocks below are flat, with no If inside another If. Each one sets a `Note`, and a single notification at the end shows it unless the Shortcut runs quietly.
+
 15. **Get Dictionary Value**. Key `type` in `Meta`. Then **Set Variable** `Type`.
 16. **Get Dictionary Value**. Key `pc` in `Meta`. Then **Set Variable** `PC`.
-17. **If**. `Type` **is** `text`.
+17. **Text** `Nothing new on ` *PC*. Then **Set Variable** `Note`.
+18. **If**. `Type` **is** `text`. Inside it:
     - **Get Dictionary Value**. Key `text` in `Meta`.
     - **Copy to Clipboard**. Input: *Dictionary Value*.
-    - **If** `Quiet` **is not** `1`: **Show Notification** `Text copied from ` *PC*. **End If**
-    - **Otherwise**
-    - **If**. `Type` **is** `image`.
-      - **Get Dictionary Value**. Key `id` in `Meta`.
-      - **Text**. *BaseUrl* `/v1/data?id=` *Dictionary Value*.
-      - **Get Contents of URL**. URL: *Text*. Method **GET**, with the **same two headers** as step 11.
-      - **Copy to Clipboard**. Input: *Contents of URL*.
-      - **If** `Quiet` **is not** `1`: **Show Notification** `Image copied from ` *PC*. **End If**
-      - **Otherwise**
-      - **If** `Quiet` **is not** `1`: **Show Notification** `Nothing new on ` *PC*. **End If**
-      - **End If**
-    - **End If**
+    - **Text** `Text copied from ` *PC*, then **Set Variable** `Note`.
+19. **If**. `Type` **is** `image`. Inside it:
+    - **Get Dictionary Value**. Key `id` in `Meta`.
+    - **Text**. *BaseUrl* `/v1/data?id=` *Dictionary Value*.
+    - **Get Contents of URL**. URL: *Text*. Method **GET**, with the **same two headers** as step 11.
+    - **Copy to Clipboard**. Input: *Contents of URL*.
+    - **Text** `Image copied from ` *PC*, then **Set Variable** `Note`.
+20. **If**. `Quiet` **is not** `1`. Inside it:
+    - **Show Notification**. Message: *Note*.
 
 ## First run
 
