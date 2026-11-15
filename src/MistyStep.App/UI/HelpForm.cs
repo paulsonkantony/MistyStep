@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
 using MistyStep.Core.Network;
@@ -11,8 +10,9 @@ using MistyStep.Windows.Network;
 namespace MistyStep.App.UI;
 
 /// <summary>
-/// Help and troubleshooting: the four health checks, addresses, port and firewall state, "Copy diagnostics"
-/// (no secrets), the log folder, a few tips, and the About section with version and credits.
+/// Help and troubleshooting: the four health checks, addresses, port and firewall state, the log folder,
+/// a few tips, and the About section with version and credits. Everything stays on this PC: there is no
+/// way to send a report anywhere (owner decision, 2026-11-14).
 /// </summary>
 internal sealed class HelpForm : Form
 {
@@ -38,15 +38,13 @@ internal sealed class HelpForm : Form
         Font = SystemFonts.MessageBoxFont!;
 
         var refresh = new Button { Text = "Check again", AutoSize = true };
-        var copy = new Button { Text = "Copy diagnostics", AutoSize = true };
         var logs = new Button { Text = "Open log folder", AutoSize = true };
         refresh.Click += async (_, _) => await RefreshAsync();
-        copy.Click += (_, _) => CopyDiagnostics();
         logs.Click += (_, _) => Open(_host.Paths.LogDirectory);
         _fixFirewall.Click += async (_, _) => await FixFirewallAsync();
 
         var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 6, 0, 0) };
-        actions.Controls.AddRange([refresh, _fixFirewall, copy, logs]);
+        actions.Controls.AddRange([refresh, _fixFirewall, logs]);
 
         var tips = new Label
         {
@@ -55,8 +53,7 @@ internal sealed class HelpForm : Form
             Text =
                 "• \"Nothing new on PC\": copy the item again on the PC, then run the Shortcut. Items stop being shared after the time set in Settings." + Environment.NewLine +
                 "• \"Request timed out\": the PC is asleep or off, or Tailscale is off on the PC or the iPad." + Environment.NewLine +
-                "• \"This device is not paired\": pair again from Pair a device, and paste the new setup code into the Shortcut's first Text action." + Environment.NewLine +
-                "• Diagnostics contain no keys, codes or clipboard content, so they are safe to share when asking for help.",
+                "• \"This device is not paired\": pair again from Pair a device, and paste the new setup code into the Shortcut's first Text action.",
         };
 
         var about = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
@@ -103,7 +100,7 @@ internal sealed class HelpForm : Form
         {
             var mark = health.Failing == check ? "✗" : health.Failing is null || check < health.Failing ? "✓" : "–";
             var detail = health.Failing == check ? $": {health.Problem}" : "";
-            lines.Add($"{mark} {Diagnostics.CheckName(check)}{detail}");
+            lines.Add($"{mark} {Health.CheckName(check)}{detail}");
         }
 
         _checks.Text = string.Join(Environment.NewLine, lines);
@@ -138,37 +135,6 @@ internal sealed class HelpForm : Form
         if (IsDisposed) return;
         _fixFirewall.Enabled = true;
         await RefreshAsync();
-    }
-
-    private void CopyDiagnostics()
-    {
-        var c = _host.Persistence.Settings;
-        var text = Diagnostics.Build(new DiagnosticsInputs(
-            _host.Version,
-            RuntimeInformation.OSDescription,
-            _listenerRegistered(),
-            _host.ServerError,
-            _host.State.Port,
-            _host.State.TailscaleEnabled,
-            _host.State.LanEnabled,
-            _host.State.Network,
-            _host.Firewall,
-            c.Mode,
-            ShareStatus.Describe(new ClipSnapshot(null, Core.Models.NoneReason.Empty), _host.Pause.Current, _host.Clock.MonotonicMs),
-            c.ExpiryMinutes,
-            _host.Registry.Devices,
-            _host.Clock.UtcNow));
-
-        try
-        {
-            Clipboard.SetText(text);
-            _host.Log.LogInformation("Diagnostics copied");
-            MessageBox.Show(this, "Diagnostics copied. Paste them where you are asking for help.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (ExternalException)
-        {
-            MessageBox.Show(this, "The clipboard is busy. Try again.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
     }
 
     private static GroupBox Group(string title, Control content)

@@ -123,7 +123,7 @@ internal sealed class TrayApp : ApplicationContext
 
         _host.NetworkChanged += OnHostNetworkChanged;
         _host.StateChanged += OnHostStateChanged;
-        _host.ProblemReported += OnProblemReported;
+        _host.ProblemOccurred += OnProblemOccurred;
         _host.Registry.Delivered += OnDelivered;
         SystemEvents.SessionEnded += OnSessionEnded;
 
@@ -144,7 +144,7 @@ internal sealed class TrayApp : ApplicationContext
     {
         _host.NetworkChanged -= OnHostNetworkChanged;
         _host.StateChanged -= OnHostStateChanged;
-        _host.ProblemReported -= OnProblemReported;
+        _host.ProblemOccurred -= OnProblemOccurred;
         _host.Registry.Delivered -= OnDelivered;
         SystemEvents.SessionEnded -= OnSessionEnded;
         _timer.Stop();
@@ -359,7 +359,7 @@ internal sealed class TrayApp : ApplicationContext
         RefreshStatus();
     }, null);
 
-    private void OnProblemReported(string message) => _ui.Post(_ => Balloon("Misty Step", message, ToolTipIcon.Warning), null);
+    private void OnProblemOccurred(string message) => _ui.Post(_ => Balloon("Misty Step", message, ToolTipIcon.Warning), null);
 
     private void OnSessionEnded(object? sender, SessionEndedEventArgs e) => _ui.Post(_ => ExitThread(), null);
 

@@ -68,7 +68,7 @@ internal sealed class AppHost : IAsyncDisposable
     public event Action? StateChanged;
 
     /// <summary>Raised for an unexpected error the user should hear about (the details go to the log only).</summary>
-    public event Action<string>? ProblemReported;
+    public event Action<string>? ProblemOccurred;
 
     private ServerDependencies _deps = null!;
     private LogLevel _level;
@@ -190,7 +190,7 @@ internal sealed class AppHost : IAsyncDisposable
         StateChanged?.Invoke();
     }
 
-    public void ReportProblem(string message) => ProblemReported?.Invoke(message);
+    public void NotifyProblem(string message) => ProblemOccurred?.Invoke(message);
 
     private void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)
     {

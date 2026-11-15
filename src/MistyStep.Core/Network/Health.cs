@@ -20,6 +20,16 @@ public sealed record HealthReport(HealthCheck? Failing, string? Problem)
 
 public static class Health
 {
+    /// <summary>The check's name as shown in the Help and troubleshooting window.</summary>
+    public static string CheckName(HealthCheck check) => check switch
+    {
+        HealthCheck.ClipboardListener => "Clipboard listener",
+        HealthCheck.Server => "Sharing server",
+        HealthCheck.Address => "Network address",
+        HealthCheck.Firewall => "Windows Firewall",
+        _ => check.ToString(),
+    };
+
     public static HealthReport Evaluate(HealthInputs inputs)
     {
         ArgumentNullException.ThrowIfNull(inputs);

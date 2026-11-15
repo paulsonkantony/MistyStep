@@ -133,7 +133,7 @@ All paths are relative to the repository root; there is no extra top-level folde
     MistyStep.Server.Tests/
   installer/mistystep.iss
   shortcut/BUILD.md       action-by-action sheet for building the Shortcut by hand
-  docs/                   SECURITY.md, PRIVACY.md, TROUBLESHOOTING.md
+  docs/                   PRIVACY.md, TROUBLESHOOTING.md
   .github/workflows/      build.yml, release.yml
 ```
 
@@ -396,13 +396,13 @@ A clipboard regularly holds passwords and private text. The design therefore tre
 **Rules for the implementation**
 
 - Never log clipboard content, tokens, pairing codes, setup codes or `Authorization` headers. Log type, size, device name and outcome only.
-- Never write clipboard content to disk. No temp files, no history, no content in crash reports.
+- Never write clipboard content to disk. No temp files, no history, no content in logs.
 - Store only SHA-256 hashes of tokens. The plaintext exists in memory from pairing until the pairing code expires, then is cleared.
 - Take every random value from `RandomNumberGenerator`.
 - Validate the `Host` header against: the Tailscale address and MagicDNS name, `<hostname>.local`, current LAN addresses, `localhost` and `127.0.0.1`, each with the configured port.
 - Make no outbound network calls except the update check, which the user opts into during first run.
 - No telemetry of any kind. State this in `PRIVACY.md`.
-- Ship a `SECURITY.md` with a private contact for vulnerability reports.
+- No reporting of any kind: no crash reports, no diagnostics export, no contact for reports, no issue templates asking for logs (owner decision, 2026-11-14: the owner receives no reports).
 
 ## Robustness
 
@@ -464,7 +464,7 @@ Quit
 - Devices window: name, last seen, items fetched, Rename, Revoke.
 - Fetch feedback: the tray icon pulses when a device fetches. An optional toast says "iPad fetched an image".
 - First-run wizard: welcome, Start with Windows, update-check opt-in, then straight into pairing.
-- Troubleshooting window: the four health checks, current addresses, port and firewall state, plus "Copy diagnostics" with no secrets in it.
+- Troubleshooting window: the four health checks, current addresses, port and firewall state, Fix firewall, and the log folder. Nothing can be sent or exported from it (see Security model).
 - Tray hints when a copy was skipped for size. No hint for secrets or excluded apps.
 - Light and dark tray icons at 100 to 200 percent scaling.
 
@@ -595,7 +595,7 @@ One executable and a README, run with `--portable`. Windows shows its own firewa
 
 **User documentation**
 
-- README: three-step quick start with a short screen recording.
+- README: three-step quick start with a short screen recording. It keeps the "About this project" notice: built entirely with AI, made for the owner's personal use and shared in case it helps others, provided as is with no support and no responsibility taken (owner request, 2026-11-14).
 - `TROUBLESHOOTING.md`: "could not connect", "nothing new", Tailscale off on the iPad, PC asleep, the SmartScreen dialog, re-pairing after a rename.
 - `PRIVACY.md`: what is stored (settings, token hashes), what is not (clipboard content), and the single optional outbound call.
 

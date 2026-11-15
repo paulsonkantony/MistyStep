@@ -43,7 +43,7 @@ internal static class Program
         Application.ThreadException += (_, e) =>
         {
             host.Log.LogError(e.Exception, "Unhandled UI exception");
-            host.ReportProblem("Something went wrong, but Misty Step is still running. Details are in the log.");
+            host.NotifyProblem("Something went wrong, but Misty Step is still running. Details are in the log.");
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
